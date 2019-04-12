@@ -3,6 +3,8 @@
 
 import time;
 from socket import *
+from playsound import playsound
+#playsound('audio.mp3')
 
 class Transmissor(object):
     """docstring for Transmissor"""
