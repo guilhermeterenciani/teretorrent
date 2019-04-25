@@ -1,1 +1,1 @@
-teretorrent
+pip install pydub
