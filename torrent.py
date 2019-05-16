@@ -35,34 +35,42 @@ class Torrent(object):
             y.stop()
 
     def enviaArquivos(self,name):
-        self.sock.settimeout(0.2)
+        
         message = b"your very important message from-> terepc"
         while True:
-            s.acquire()
+            
             try:
                 data_string = pickle.dumps(glob.glob("./sender/*.mp3"));
+                s.acquire()
                 self.sock.sendto(data_string, ('<broadcast>', 12000))
+                s.release();
             except KeyboardInterrupt:
                 print("Finalizando threading de enviaArquivos")
-            s.release();
-            time.sleep(2);
+            
+            time.sleep(1);
 
 
     def recebeArquivos(self):
         while True:
             s.acquire()
+            self.sock.settimeout(0.002)
             try:
+                
                 data, addr = self.sock.recvfrom(1024)
+                s.release();
                 data_arr = pickle.loads(data);
                 print("Recebi do sender= ")
                 print(data_arr);
             
             except timeout:
-                print("Não recebi dados de outros piers");
+                s.release();
+                pass
+                #print("Não recebi dados de outros piers");
             except KeyboardInterrupt:
+                s.release();
                 print("Finalizando o software e a threading de recebimento dos arquivos.");
-            s.release();
-            print("received message: %s"%data)
+            
+            #print("received message: %s"%data)
 def main():
     '''
     if len(sys.argv)<2:
