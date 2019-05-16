@@ -7,6 +7,7 @@ from pydub import AudioSegment
 import pyaudio
 from pydub.playback import play
 
+
 def main():
     sock = socket(AF_INET, SOCK_DGRAM)
     sock.bind(('', 12000))
