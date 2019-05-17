@@ -7,7 +7,13 @@ import _thread
 import sys
 import glob
 import pickle
-s = _thread.allocate_lock()
+#usado para inserir em uma lista ordenada;
+import bisect 
+#definindo constantes no código:
+PACOTE_DIRETORIOS = 0;
+
+enviolock = _thread.allocate_lock()
+recebimentolock = _thread.allocate_lock()
 class Torrent(object):
     """docstring for torrent"""
     def __init__(self):
@@ -15,15 +21,14 @@ class Torrent(object):
         self.sock = socket(AF_INET, SOCK_DGRAM)
         self.sock.setsockopt(SOL_SOCKET,SO_BROADCAST, 1)
         self.sock.bind(('', 12000));
-        s.acquire()
-        s.release()
-        #self.sock_files = socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP)
-        
-        #self.client = socket(AF_INET,SOCK_DGRAM) # UDP
-        #self.client.setsockopt(SOL_SOCKET,SO_BROADCAST, 1)
-        #self.client.bind(("", 37020))
-        #self.sock_files.bind(("", 44444))
-        #self.sock.settimeout(0.2);
+
+        #matriz de arquivos com seus seeders;
+        #luff.mp3 [10.10.12.100, 10.10.12.10]
+        #tiao.mp3 [10.10.12.102, 10.10.12.101]
+        #aaaa.mp3 [10.10.12.100, 10.10.12.101, 10.10.12.103, 10.10.12.104]]
+        #bbbb.mp3 [10.10.12.12]
+        self.listaarquivos = [];
+
         try:
             x = threading.Thread(target=self.enviaArquivos,args=(1,));
             x.start()
@@ -33,41 +38,64 @@ class Torrent(object):
             print("Finalizando as threading de envio e recebimento dos arquivos")
             x.stop()
             y.stop()
+            self.sock.close()
 
     def enviaArquivos(self,name):
         
         message = b"your very important message from-> terepc"
         while True:
-            
             try:
-                data_string = pickle.dumps(glob.glob("./sender/*.mp3"));
-                s.acquire()
+                #função pickle usada para transformar o vetor em bytes.
+                #depois do outro lado voltamos para vetor.
+                #função blob utilizada para listar os arquivos mp3 que existem na pasta sender do meu programa.
+                datasender = [];
+                datasender.append(PACOTE_DIRETORIOS);
+                datasender.append(glob.glob("./sender/*.mp3"))
+                data_string = pickle.dumps(datasender);
+                #requerindo permissão de escrita no buffer, pois outras threading podem estar utilizando para escrita.
+                enviolock.acquire()
+                #enviando os dados por broadcast, sempre pela porta 12000
                 self.sock.sendto(data_string, ('<broadcast>', 12000))
-                s.release();
+                #liberando os semaforo.
+                enviolock.release();
             except KeyboardInterrupt:
+                enviolock.release();
                 print("Finalizando threading de enviaArquivos")
-            
+            #a função de liberar o arquivo vai ser chamada de 1 em 1 segundo. para enviar por broadcast todos os arquivos que tem na minha máquina.
             time.sleep(1);
 
 
     def recebeArquivos(self):
         while True:
-            s.acquire()
+            recebimentolock.acquire()
             self.sock.settimeout(0.002)
             try:
                 
                 data, addr = self.sock.recvfrom(1024)
-                s.release();
+                recebimentolock.release();
                 data_arr = pickle.loads(data);
                 print("Recebi do sender= ")
-                print(data_arr);
+                #print(data_arr);
+                #Se a posição zero contiver o pacote_diretorios:
+                #Preparamos para atualizar a lista de usuários do nosso seders: "Pessoas que podem me enviar arquivos"
+                if(data_arr[0]==PACOTE_DIRETORIOS):
+                    print("Posso começar a atualizar a lista de seeders" + addr[0] +":"+str(addr[1]));
+                    for x in data_arr[1]:
+                        try:
+                            index = self.listaarquivos.index(x)
+                            print("O arquivo ja esta na lista => "+x);
+                        except ValueError:
+                            bisect.insort(self.listaarquivos,x);
+                            print("O arquivo vai ser inserido na lista => "+x);
+                    print (self.listaarquivos)
+
             
             except timeout:
-                s.release();
+                recebimentolock.release();
                 pass
                 #print("Não recebi dados de outros piers");
             except KeyboardInterrupt:
-                s.release();
+                recebimentolock.release();
                 print("Finalizando o software e a threading de recebimento dos arquivos.");
             
             #print("received message: %s"%data)
