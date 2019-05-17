@@ -27,7 +27,7 @@ class Torrent(object):
         #tiao.mp3 [10.10.12.102, 10.10.12.101]
         #aaaa.mp3 [10.10.12.100, 10.10.12.101, 10.10.12.103, 10.10.12.104]]
         #bbbb.mp3 [10.10.12.12]
-        self.listaarquivos = [];
+        self.listaarquivos = dict();
 
         try:
             x = threading.Thread(target=self.enviaArquivos,args=(1,));
@@ -66,27 +66,65 @@ class Torrent(object):
 
 
     def recebeArquivos(self):
+        '''
+        função curinga para limpar o dicionário e apagar pessoas que não estão mais na minha rede 
+        p2p -> função não foi utilizada porque os peers nunca vão morrer.
+        cont = 0
+        '''
         while True:
+            '''
+            função curinga hehehe
+            if cont<6000:
+                cont = cont+1
+            else:
+                cont=0;
+                self.listaarquivos = dict();
+            '''
             recebimentolock.acquire()
             self.sock.settimeout(0.002)
             try:
                 
                 data, addr = self.sock.recvfrom(1024)
-                recebimentolock.release();
+                recebimentolock.release(); #TODO: provavelmente não vai ficar aqui hehehehe
                 data_arr = pickle.loads(data);
                 print("Recebi do sender= ")
                 #print(data_arr);
                 #Se a posição zero contiver o pacote_diretorios:
                 #Preparamos para atualizar a lista de usuários do nosso seders: "Pessoas que podem me enviar arquivos"
                 if(data_arr[0]==PACOTE_DIRETORIOS):
+                    for x in data_arr[1]:
+                        if x not in self.listaarquivos:
+                            self.listaarquivos[x] = [addr[0]];
+                        else:
+                            if (addr[0] not in self.listaarquivos[x]): 
+                               self.listaarquivos[x].append(addr[0]); 
+                    print (self.listaarquivos);
+
+                    '''
                     print("Posso começar a atualizar a lista de seeders" + addr[0] +":"+str(addr[1]));
                     for x in data_arr[1]:
                         try:
-                            index = self.listaarquivos.index(x)
+                            #print (self.listaarquivos[0])
+                            if type(self.listaarquivos) is not list:
+                                self.listaarquivos.append([x,[addr[0]]]);
+                                print("O arquivo vai ser inserido na lista => "+x);
+                            index = self.listaarquivos[0].index(x)
                             print("O arquivo ja esta na lista => "+x);
+                            #se já for uma lista voce vai adicionar o ip do cara que tem o arquivo;
+                            if type(self.listaarquivos[index]) is list:
+                                #adicionando o ip que tem este arquivo.
+                                self.listaarquivos[index].append(addr[0])
+                            else:
+                                #ninguém até o momento tinha o arquivo. Agora podemos utiliza-lo;
+                                print(index);
+                                #self.listaarquivos[index] = [];
+                                self.listaarquivos[index].append(addr[0])
+                                pass
+
                         except ValueError:
-                            bisect.insort(self.listaarquivos,x);
-                            print("O arquivo vai ser inserido na lista => "+x);
+                    '''
+
+                            
                     print (self.listaarquivos)
 
             
