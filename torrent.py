@@ -11,6 +11,7 @@ import pickle
 import bisect 
 #definindo constantes no código:
 PACOTE_DIRETORIOS = 0;
+#caio
 
 enviolock = _thread.allocate_lock()
 recebimentolock = _thread.allocate_lock()
