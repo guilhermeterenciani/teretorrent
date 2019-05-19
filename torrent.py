@@ -9,9 +9,17 @@ import glob
 import pickle
 #usado para inserir em uma lista ordenada;
 import bisect 
+import logging
+
+logging.basicConfig(filename='app.log', filemode='w', format='%(asctime)s - %(message)s')
+
+
+
 #definindo constantes no código:
+
+
 PACOTE_DIRETORIOS = 0;
-#caio
+
 
 enviolock = _thread.allocate_lock()
 recebimentolock = _thread.allocate_lock()
@@ -138,6 +146,15 @@ class Torrent(object):
                 print("Finalizando o software e a threading de recebimento dos arquivos.");
             
             #print("received message: %s"%data)
+    def requisicaodeArquivo(self,nomeArquivo):
+        '''
+            Função responsável por requisição de arquivos para serem executados pelo programa.
+        '''
+
+
+
+
+
 def main():
     '''
     if len(sys.argv)<2:
