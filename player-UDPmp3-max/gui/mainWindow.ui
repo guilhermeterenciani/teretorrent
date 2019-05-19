@@ -25,7 +25,7 @@
         <widget class="QWidget" name="widget_2" native="true"/>
        </item>
        <item>
-        <widget class="QPushButton" name="pushButton">
+        <widget class="QPushButton" name="btnTocar">
          <property name="text">
           <string>Reproduzir</string>
          </property>
