@@ -24,6 +24,7 @@ def main():
         print("Audio info: format=%d channels= %d rate= %d"
             %(p.get_format_from_width(song.sample_width),song.channels,song.frame_rate))
         x=0;
+        
         lamb = 1.820;
         tamfile=len(song);
         while(x<tamfile):
