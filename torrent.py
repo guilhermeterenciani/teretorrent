@@ -11,6 +11,9 @@ import pickle
 import bisect 
 import logging
 
+from pydub import AudioSegment
+import pyaudio
+
 logging.basicConfig(filename='app.log', filemode='w', format='%(asctime)s - %(message)s')
 
 
@@ -48,7 +51,6 @@ class Torrent(object):
             x.stop()
             y.stop()
             self.sock.close()
-
     def enviaArquivos(self,name):
         
         message = b"your very important message from-> terepc"
@@ -72,8 +74,6 @@ class Torrent(object):
                 print("Finalizando threading de enviaArquivos")
             #a função de liberar o arquivo vai ser chamada de 1 em 1 segundo. para enviar por broadcast todos os arquivos que tem na minha máquina.
             time.sleep(1);
-
-
     def recebeArquivos(self):
         '''
         função curinga para limpar o dicionário e apagar pessoas que não estão mais na minha rede 
@@ -107,36 +107,39 @@ class Torrent(object):
                         else:
                             if (addr[0] not in self.listaarquivos[x]): 
                                self.listaarquivos[x].append(addr[0]); 
-                    print (self.listaarquivos);
-
+                    #mensagem de debug para os arquivos.
+                    #print (self.listaarquivos);
+                elif(data_arr[0]==PACOTE_REQUISICAO_DOWNLOAD):
                     '''
-                    print("Posso começar a atualizar a lista de seeders" + addr[0] +":"+str(addr[1]));
-                    for x in data_arr[1]:
-                        try:
-                            #print (self.listaarquivos[0])
-                            if type(self.listaarquivos) is not list:
-                                self.listaarquivos.append([x,[addr[0]]]);
-                                print("O arquivo vai ser inserido na lista => "+x);
-                            index = self.listaarquivos[0].index(x)
-                            print("O arquivo ja esta na lista => "+x);
-                            #se já for uma lista voce vai adicionar o ip do cara que tem o arquivo;
-                            if type(self.listaarquivos[index]) is list:
-                                #adicionando o ip que tem este arquivo.
-                                self.listaarquivos[index].append(addr[0])
-                            else:
-                                #ninguém até o momento tinha o arquivo. Agora podemos utiliza-lo;
-                                print(index);
-                                #self.listaarquivos[index] = [];
-                                self.listaarquivos[index].append(addr[0])
-                                pass
-
-                        except ValueError:
+                    datasender = [];
+                    datasender.append(PACOTE_DIRETORIOS);
+                    datasender.append(glob.glob("./sender/*.mp3"))
+                    data_string = pickle.dumps(datasender);
+                    #requerindo permissão de escrita no buffer, pois outras threading podem estar utilizando para escrita.
+                    enviolock.acquire()
+                    #enviando os dados por broadcast, sempre pela porta 12000
+                    self.sock.sendto(data_string, ('<broadcast>', 12000))
+                    #liberando os semaforo.
+                    enviolock.release();
                     '''
-
-                            
-                    print (self.listaarquivos)
-
-            
+                    #TODO: isso vai para uma função em uma threading para envio dos arquivos;
+                    song = AudioSegment.from_file('sender/'+data_arr[1], format="mp3")
+                    x=0;
+                    lamb = 1.820;
+                    tamfile=len(song);
+                    while(x<tamfile):
+                        if(x+lamb>tamfile):
+                            print(len(song[x:-1].raw_data));
+                            enviolock.acquire()
+                            sock.sendto(song[x:-1].raw_data,cliente);
+                            enviolock.release()
+                        else:
+                            print(len(song[x:x+lamb].raw_data));
+                            enviolock.acquire()
+                            sock.sendto(song[x:x+lamb].raw_data,cliente);
+                            enviolock.release()
+                        x = x+lamb;
+                        time.sleep(0.0015);
             except timeout:
                 recebimentolock.release();
                 pass
