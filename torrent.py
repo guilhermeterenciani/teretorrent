@@ -14,7 +14,7 @@ import logging
 from pydub import AudioSegment
 import pyaudio
 
-logging.basicConfig(filename='app.log', filemode='w', format='%(asctime)s - %(message)s')
+logging.basicConfig(filename='app.log', filemode='a', format='%(asctime)s$%(message)s', datefmt='%d$%b$%y$%H$%M$%S$,mmm$')
 
 
 
@@ -23,6 +23,7 @@ logging.basicConfig(filename='app.log', filemode='w', format='%(asctime)s - %(me
 
 PACOTE_DIRETORIOS = 0;
 PACOTE_REQUISICAO_DOWNLOAD = 1;
+PACOTE_PLAY_AUDIO = 2;
 
 enviolock = _thread.allocate_lock()
 recebimentolock = _thread.allocate_lock()
@@ -127,19 +128,33 @@ class Torrent(object):
                     x=0;
                     lamb = 1.820;
                     tamfile=len(song);
-                    while(x<tamfile):
-                        if(x+lamb>tamfile):
-                            print(len(song[x:-1].raw_data));
+                    while(x*lamb<tamfile):
+                        if(x*lamb+lamb>tamfile):
+                            datasender = [];
+                            datasender.append(PACOTE_PLAY_AUDIO);
+                            datasender.append(x);
+                            datasender.append(tamfile)
+                            datasender.append(song[x:-1].raw_data)
+                            data_string = pickle.dumps(datasender);
                             enviolock.acquire()
-                            sock.sendto(song[x:-1].raw_data,cliente);
+                            self.sock.sendto(data_string,addr);
                             enviolock.release()
                         else:
-                            print(len(song[x:x+lamb].raw_data));
+                            datasender = [];
+                            datasender.append(PACOTE_PLAY_AUDIO);
+                            datasender.append(x);
+                            datasender.append(tamfile)
+                            datasender.append(song[x*lamb:x*lamb+lamb].raw_data)
+                            data_string = pickle.dumps(datasender);
                             enviolock.acquire()
-                            sock.sendto(song[x:x+lamb].raw_data,cliente);
+                            self.sock.sendto(data_string,addr);
                             enviolock.release()
-                        x = x+lamb;
-                        time.sleep(0.0015);
+                        logging.debug('%d PKT enviado',x);
+                        x = x+1;
+                        time.sleep(0.02);
+                elif(PACOTE_PLAY_AUDIO==data_arr[0]):
+                    logging.error('Função de recebimento ainda não implementada');
+                    print("Função de recebimento ainda não implementada")
             except timeout:
                 recebimentolock.release();
                 pass
