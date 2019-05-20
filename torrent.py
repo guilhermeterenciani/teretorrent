@@ -19,7 +19,7 @@ logging.basicConfig(filename='app.log', filemode='w', format='%(asctime)s - %(me
 
 
 PACOTE_DIRETORIOS = 0;
-
+PACOTE_REQUISICAO_DOWNLOAD = 1;
 
 enviolock = _thread.allocate_lock()
 recebimentolock = _thread.allocate_lock()
@@ -150,10 +150,17 @@ class Torrent(object):
         '''
             Função responsável por requisição de arquivos para serem executados pelo programa.
         '''
-
-
-
-
+        datasender = [];
+        datasender.append(PACOTE_REQUISICAO_DOWNLOAD);
+        datasender.append(nomeArquivo)
+        data_string = pickle.dumps(datasender);
+        #requerindo permissão de escrita no buffer, pois outras threading podem estar utilizando para escrita.
+        enviolock.acquire()
+        #enviando os pedido de file para todos os serves que contem o arquivo, sempre pela porta 12000
+        for server in self.listaarquivos[nomeArquivo]:
+            print("Pedindo arquivo par o server"+server);
+            self.sock.sendto(data_string, (server, 12000))
+        enviolock.release();
 
 def main():
     '''
@@ -162,6 +169,8 @@ def main():
         exit();
     '''
     torrent = Torrent();
+    time.sleep(4)
+    torrent.requisicaodeArquivo("./sender/luffy.mp3");
 
 if __name__ == '__main__':
     main()
