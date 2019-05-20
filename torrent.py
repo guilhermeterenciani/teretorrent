@@ -14,7 +14,7 @@ import logging
 from pydub import AudioSegment
 import pyaudio
 
-logging.basicConfig(filename='app.log', filemode='w', level=logging.INFO, format='%(asctime)s.%(msecs)03d$ %(message)s %(levelname)s',datefmt='%d$%b$%y$%H$%M$%S$')
+logging.basicConfig(filename='log/app.log', filemode='w', level=logging.INFO, format='%(asctime)s.%(msecs)03d$ %(message)s %(levelname)s',datefmt='%d$%b$%y$%H$%M$%S$')
 logging.info('This will get logged to a file')
 
 
