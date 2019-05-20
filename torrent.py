@@ -121,40 +121,30 @@ class Torrent(object):
                     #liberando os semaforo.
                     enviolock.release();
                     '''
-                    #TODO: isso vai para uma função em uma threading para envio dos arquivos;
-                    song = AudioSegment.from_file('sender/'+data_arr[1], format="mp3")
-                    x=0;
-                    lamb = 1.820;
-                    tamfile=len(song);
-                    while(x*lamb<tamfile):
-                        if(x*lamb+lamb>tamfile):
-                            datasender = [];
-                            datasender.append(PACOTE_PLAY_AUDIO);
-                            datasender.append(x);
-                            datasender.append(tamfile)
-                            datasender.append(song[x:-1].raw_data)
-                            data_string = pickle.dumps(datasender);
-                            enviolock.acquire()
-                            self.sock.sendto(data_string,addr);
-                            enviolock.release()
-                        else:
-                            datasender = [];
-                            datasender.append(PACOTE_PLAY_AUDIO);
-                            datasender.append(x);
-                            datasender.append(tamfile)
-                            datasender.append(song[x*lamb:x*lamb+lamb].raw_data)
-                            data_string = pickle.dumps(datasender);
-                            enviolock.acquire()
-                            self.sock.sendto(data_string,addr);
-                            enviolock.release()
-                        logging.info('%d PKT enviado',x);
-                        #logging.error('This will get logged to a file')
-                        print("Enviei o pacote %d"%x)
-                        x = x+1;
-                        time.sleep(0.02);
+                    threadingdownload = threading.Thread(target=self.envia_arquivo_para_cliente,args=(data_arr[1],addr,));
+                    threadingdownload.start()
+                    
                 elif(PACOTE_PLAY_AUDIO==data_arr[0]):
+                    '''
+                        Função para executar os arquivos que chegam no lado do receptor;
+                    '''
+                    p = pyaudio.PyAudio()
+                    stream = p.open(format=8,channels=2,rate=44100,output=True)
+                    try:
+                        #sock.sendto("luffy2.mp3".encode('utf-8'),("localhost",12000))
+                        while 1:
+                            recebimentolock.acquire()
+                            data, server = (self.sock.recvfrom(320))
+                            recebimentolock.release()
+                            stream.write(data);
+                    except KeyboardInterrupt:
+                        print("Finalizando programa");
+                    
                     logging.info('Função de recebimento ainda não implementada');
                     print("Função de recebimento ainda não implementada")
+
+
+
             except timeout:
                 recebimentolock.release();
                 pass
@@ -180,6 +170,42 @@ class Torrent(object):
             enviolock.acquire()
             self.sock.sendto(data_string, (server, 12000))
             enviolock.release();
+
+    def envia_arquivo_para_cliente(self,namefile,addr):
+        song = AudioSegment.from_file('sender/'+namefile, format="mp3")
+        x=0;
+        lamb = 1.820;
+        tamfile=len(song);
+        while(x*lamb<tamfile):
+            if(x*lamb+lamb>tamfile):
+                datasender = [];
+                datasender.append(PACOTE_PLAY_AUDIO);
+                datasender.append(x);
+                datasender.append(tamfile)
+                datasender.append(song[x:-1].raw_data)
+                data_string = pickle.dumps(datasender);
+                enviolock.acquire()
+                self.sock.sendto(data_string,addr);
+                enviolock.release()
+            else:
+                datasender = [];
+                datasender.append(PACOTE_PLAY_AUDIO);
+                datasender.append(x);
+                datasender.append(tamfile)
+                datasender.append(song[x*lamb:x*lamb+lamb].raw_data)
+                data_string = pickle.dumps(datasender);
+                enviolock.acquire()
+                self.sock.sendto(data_string,addr);
+                enviolock.release()
+            enviolock.acquire()
+            logging.info('%d PKT enviado$%s',x,addr[0]);
+            enviolock.acquire()
+            #logging.error('This will get logged to a file')
+            print("Enviei o pacote %d"%x)
+            x = x+1;
+            time.sleep(0.02);
+
+    
 
 def main():
     '''
