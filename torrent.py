@@ -14,13 +14,11 @@ import logging
 from pydub import AudioSegment
 import pyaudio
 
-logging.basicConfig(filename='app.log', filemode='a', format='%(asctime)s$%(message)s', datefmt='%d$%b$%y$%H$%M$%S$,mmm$')
-
+logging.basicConfig(filename='app.log', filemode='w', level=logging.INFO, format='%(asctime)s.%(msecs)03d$ %(message)s %(levelname)s',datefmt='%d$%b$%y$%H$%M$%S$')
+logging.info('This will get logged to a file')
 
 
 #definindo constantes no código:
-
-
 PACOTE_DIRETORIOS = 0;
 PACOTE_REQUISICAO_DOWNLOAD = 1;
 PACOTE_PLAY_AUDIO = 2;
@@ -97,7 +95,7 @@ class Torrent(object):
                 data, addr = self.sock.recvfrom(1024)
                 recebimentolock.release(); #TODO: provavelmente não vai ficar aqui hehehehe
                 data_arr = pickle.loads(data);
-                print("Recebi do sender= ")
+                print("Recebi do sender= %s o pacote de %d"%(addr[0],data_arr[0]))
                 #print(data_arr);
                 #Se a posição zero contiver o pacote_diretorios:
                 #Preparamos para atualizar a lista de usuários do nosso seders: "Pessoas que podem me enviar arquivos"
@@ -109,7 +107,7 @@ class Torrent(object):
                             if (addr[0] not in self.listaarquivos[x]): 
                                self.listaarquivos[x].append(addr[0]); 
                     #mensagem de debug para os arquivos.
-                    #print (self.listaarquivos);
+                    print (self.listaarquivos);
                 elif(data_arr[0]==PACOTE_REQUISICAO_DOWNLOAD):
                     '''
                     datasender = [];
@@ -149,11 +147,13 @@ class Torrent(object):
                             enviolock.acquire()
                             self.sock.sendto(data_string,addr);
                             enviolock.release()
-                        logging.debug('%d PKT enviado',x);
+                        logging.info('%d PKT enviado',x);
+                        #logging.error('This will get logged to a file')
+                        print("Enviei o pacote %d"%x)
                         x = x+1;
                         time.sleep(0.02);
                 elif(PACOTE_PLAY_AUDIO==data_arr[0]):
-                    logging.error('Função de recebimento ainda não implementada');
+                    logging.info('Função de recebimento ainda não implementada');
                     print("Função de recebimento ainda não implementada")
             except timeout:
                 recebimentolock.release();
@@ -173,12 +173,13 @@ class Torrent(object):
         datasender.append(nomeArquivo)
         data_string = pickle.dumps(datasender);
         #requerindo permissão de escrita no buffer, pois outras threading podem estar utilizando para escrita.
-        enviolock.acquire()
+        
         #enviando os pedido de file para todos os serves que contem o arquivo, sempre pela porta 12000
-        for server in self.listaarquivos[nomeArquivo]:
+        for server in self.listaarquivos[("./sender/"+nomeArquivo)]:
             print("Pedindo arquivo par o server"+server);
+            enviolock.acquire()
             self.sock.sendto(data_string, (server, 12000))
-        enviolock.release();
+            enviolock.release();
 
 def main():
     '''
@@ -188,7 +189,7 @@ def main():
     '''
     torrent = Torrent();
     time.sleep(4)
-    torrent.requisicaodeArquivo("./sender/luffy.mp3");
+    torrent.requisicaodeArquivo("luffy.mp3");
 
 if __name__ == '__main__':
     main()

@@ -7,14 +7,14 @@ from pydub import AudioSegment
 import pyaudio
 from pydub.playback import play
 
-
+pc='10.10.34.42';
 def main():
     sock = socket(AF_INET, SOCK_DGRAM)
     sock.bind(('', 12000))
     try:
-        data, cliente = sock.recvfrom(1200);
-        print("Recebido requisição do cliente "+cliente[0]+" Do dado= "+data.decode())
-        song = AudioSegment.from_file('sender/'+data.decode(), format="mp3")
+        #data, cliente = sock.recvfrom(1200);
+        #print("Recebido requisição do cliente "+cliente[0]+" Do dado= "+data.decode())
+        song = AudioSegment.from_file('sender/'+"luffy.mp3", format="mp3")
         p = pyaudio.PyAudio()
 
         stream = p.open(format=p.get_format_from_width(song.sample_width),
@@ -30,10 +30,10 @@ def main():
         while(x<tamfile):
             if(x+lamb>tamfile):
                 print(len(song[x:-1].raw_data));
-                sock.sendto(song[x:-1].raw_data,cliente);
+                sock.sendto(song[x:-1].raw_data,(pc,12001));
             else:
                 print(len(song[x:x+lamb].raw_data));
-                sock.sendto(song[x:x+lamb].raw_data,cliente);
+                sock.sendto(song[x:x+lamb].raw_data,(pc,12001));
             x = x+lamb;
             time.sleep(0.0015);
     except KeyboardInterrupt:
