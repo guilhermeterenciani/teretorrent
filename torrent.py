@@ -39,7 +39,8 @@ class Torrent(object):
         #aaaa.mp3 [10.10.12.100, 10.10.12.101, 10.10.12.103, 10.10.12.104]]
         #bbbb.mp3 [10.10.12.12]
         self.listaarquivos = dict();
-
+        p = pyaudio.PyAudio()
+        self.stream = p.open(format=8,channels=2,rate=44100,output=True)
         try:
             x = threading.Thread(target=self.enviaArquivos,args=(1,));
             x.start()
@@ -128,15 +129,9 @@ class Torrent(object):
                     '''
                         Função para executar os arquivos que chegam no lado do receptor;
                     '''
-                    p = pyaudio.PyAudio()
-                    stream = p.open(format=8,channels=2,rate=44100,output=True)
                     try:
                         #sock.sendto("luffy2.mp3".encode('utf-8'),("localhost",12000))
-                        while 1:
-                            recebimentolock.acquire()
-                            data, server = (self.sock.recvfrom(320))
-                            recebimentolock.release()
-                            stream.write(data);
+                        self.stream.write(data_arr[3]);
                     except KeyboardInterrupt:
                         print("Finalizando programa");
                     
@@ -215,7 +210,7 @@ def main():
     '''
     torrent = Torrent();
     time.sleep(4)
-    torrent.requisicaodeArquivo("luffy.mp3");
+    torrent.requisicaodeArquivo("luffy3.mp3");
 
 if __name__ == '__main__':
     main()
