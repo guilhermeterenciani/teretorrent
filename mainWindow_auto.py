@@ -89,6 +89,8 @@ class Ui_MainWindow(object):
         self.tableModel = MyTableModel(self.thread.items, self.header, self.centralwidget)
         self.tv.setModel(self.tableModel)
 
+        self.tableData = self.thread.items
+
         try:
             #print(oldId)
             self.tv.selectRow(oldId)
@@ -102,7 +104,10 @@ class Ui_MainWindow(object):
         print( "arquivo solicitado:  " )
         id = self.tv.selectionModel().selectedRows()[0].row()
         print( "índice %d nome %s" %(id, self.tableData[id][0]) )
-        self.statusbar.showMessage(self.tableData[id][0] + " solicitado - buscando")
+        
+        self.torrent.requisicaodeArquivo(self.tableData[id][0])
+        
+        self.statusbar.showMessage(self.tableData[id][0] + " solicitado")
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
