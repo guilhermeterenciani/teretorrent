@@ -33,7 +33,7 @@ class Torrent(object):
         self.sock = socket(AF_INET, SOCK_DGRAM)
         self.sock.setsockopt(SOL_SOCKET,SO_BROADCAST, 1)
         self.sock.bind(('', 12000));
-
+        self.sock.settimeout(0.2)
         #matriz de arquivos com seus seeders;
         #luff.mp3 [10.10.12.100, 10.10.12.10]
         #tiao.mp3 [10.10.12.102, 10.10.12.101]
@@ -94,7 +94,7 @@ class Torrent(object):
                 self.listaarquivos = dict();
             '''
             recebimentolock.acquire()
-            self.sock.settimeout(0.002)
+            
             try:
                 
                 data, addr = self.sock.recvfrom(351)
@@ -180,7 +180,6 @@ class Torrent(object):
         x=0;
         lamb = 1.820;
         tamfile=len(song);
-        self.sock.settimeout(0.02)
         try:
             while(x*lamb<tamfile):
                 if(x*lamb+lamb>tamfile):
