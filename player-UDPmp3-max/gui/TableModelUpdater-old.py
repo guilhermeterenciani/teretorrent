@@ -19,7 +19,7 @@ class TableModelUpdater(QThread):
             for key,val in self.torrent.listaarquivos.items():
                 name = key.split("/")
                 ips = ",".join(val)
-                self.items.append([key, ips])
+                self.items.append([name[-1], ips])
 
             #self.items = [["aaaaa", "inferno"]]
             self.threadUpdate.emit()

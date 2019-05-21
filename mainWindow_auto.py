@@ -84,8 +84,17 @@ class Ui_MainWindow(object):
 
     def threadUpdate(self):
 
+        oldId = self.tv.selectionModel().selectedRows()[0].row()
+
         self.tableModel = MyTableModel(self.thread.items, self.header, self.centralwidget)
         self.tv.setModel(self.tableModel)
+
+        try:
+            #print(oldId)
+            self.tv.selectRow(oldId)
+        except:
+            print("Oops!" + sys.exc_info()[0] + "occured.")
+            print("provavelmente indice %d inválido " % (oldId))
 
         #print("aeeeeho")
 
@@ -97,7 +106,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "TerêTorrent viewer"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "TerêTorrent player"))
         self.btnTocar.setText(_translate("MainWindow", "Reproduzir"))
 
     
