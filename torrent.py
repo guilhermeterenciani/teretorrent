@@ -194,11 +194,11 @@ class Torrent(object):
                 enviolock.release()
             enviolock.acquire()
             logging.info('%d PKT enviado$%s',x,addr[0]);
-            enviolock.acquire()
+            enviolock.release()
             #logging.error('This will get logged to a file')
             print("Enviei o pacote %d"%x)
             x = x+1;
-            time.sleep(0.02);
+            time.sleep(0.0018);
 
     
 
