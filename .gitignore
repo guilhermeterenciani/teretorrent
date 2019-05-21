@@ -1,3 +1,4 @@
 sender/*
 .vscode/*
 log/*
+__pycache__/*

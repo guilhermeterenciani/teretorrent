@@ -217,7 +217,8 @@ class Torrent(object):
         except timeout:
             enviolock.release()
             print("Receptor parou de receber meus arquivos");
-
+    def __del__(self):
+        print("Matando meu objeto");
     
 
 def main():
