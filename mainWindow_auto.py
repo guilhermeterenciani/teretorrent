@@ -87,7 +87,7 @@ class Ui_MainWindow(object):
         self.tableModel = MyTableModel(self.thread.items, self.header, self.centralwidget)
         self.tv.setModel(self.tableModel)
 
-        print("aeeeeho")
+        #print("aeeeeho")
 
     def playSong(self):
         print( "arquivo solicitado:  " )

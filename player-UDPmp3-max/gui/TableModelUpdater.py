@@ -10,13 +10,14 @@ class TableModelUpdater(QThread):
     def __init__(self, torrent ):
         QThread.__init__(self)
 
-        self.items = []
         self.torrent = torrent
 
     def run(self):
         
         while True:
+            self.items = []
             for key,val in self.torrent.listaarquivos.items():
+                name = key.split("/")
                 ips = ",".join(val)
                 self.items.append([key, ips])
 
