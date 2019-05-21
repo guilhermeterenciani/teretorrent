@@ -73,6 +73,9 @@ class Torrent(object):
             except KeyboardInterrupt:
                 enviolock.release();
                 print("Finalizando threading de enviaArquivos")
+            except:
+                enviolock.release();
+                print("Deu algum erro inesperado na função de enviar arquivos");
             #a função de liberar o arquivo vai ser chamada de 1 em 1 segundo. para enviar por broadcast todos os arquivos que tem na minha máquina.
             time.sleep(1);
     def recebeArquivos(self):
@@ -94,7 +97,7 @@ class Torrent(object):
             self.sock.settimeout(0.002)
             try:
                 
-                data, addr = self.sock.recvfrom(1024)
+                data, addr = self.sock.recvfrom(351)
                 recebimentolock.release(); #TODO: provavelmente não vai ficar aqui hehehehe
                 data_arr = pickle.loads(data);
                 #print("Recebi do sender= %s o pacote de %d"%(addr[0],data_arr[0]))
@@ -147,6 +150,7 @@ class Torrent(object):
 
             except timeout:
                 recebimentolock.release();
+                #print("Estouro de timeout");
                 pass
                 #print("Não recebi dados de outros piers");
             except KeyboardInterrupt:
@@ -176,34 +180,43 @@ class Torrent(object):
         x=0;
         lamb = 1.820;
         tamfile=len(song);
-        while(x*lamb<tamfile):
-            if(x*lamb+lamb>tamfile):
-                datasender = [];
-                datasender.append(PACOTE_PLAY_AUDIO);
-                datasender.append(x);
-                datasender.append(tamfile)
-                datasender.append(song[x:-1].raw_data)
-                data_string = pickle.dumps(datasender);
-                enviolock.acquire()
-                self.sock.sendto(data_string,addr);
-                enviolock.release()
-            else:
-                datasender = [];
-                datasender.append(PACOTE_PLAY_AUDIO);
-                datasender.append(x);
-                datasender.append(tamfile)
-                datasender.append(song[x*lamb:x*lamb+lamb].raw_data)
-                data_string = pickle.dumps(datasender);
-                enviolock.acquire()
-                self.sock.sendto(data_string,addr);
-                enviolock.release()
-            logginglock.acquire()
-            logging.info('%d PKT enviado$%s',x,addr[0]);
-            logginglock.release()
-            #logging.error('This will get logged to a file')
-            print("Enviei o pacote %d"%x)
-            x = x+1;
-            time.sleep(0.0013);
+        self.sock.settimeout(0.02)
+        try:
+            while(x*lamb<tamfile):
+                if(x*lamb+lamb>tamfile):
+                    datasender = [];
+                    datasender.append(PACOTE_PLAY_AUDIO);
+                    datasender.append(x);
+                    datasender.append(tamfile)
+                    datasender.append(song[x:-1].raw_data)
+                    data_string = pickle.dumps(datasender);
+                    enviolock.acquire()
+                    
+                    self.sock.sendto(data_string,addr);
+                    enviolock.release()
+                else:
+                    datasender = [];
+                    datasender.append(PACOTE_PLAY_AUDIO);
+                    datasender.append(x);
+                    datasender.append(tamfile)
+                    datasender.append(song[x*lamb:x*lamb+lamb].raw_data)
+                    data_string = pickle.dumps(datasender);
+                    enviolock.acquire()
+
+                    self.sock.sendto(data_string,addr);
+                    enviolock.release()
+                logginglock.acquire()
+                logging.info('%d PKT enviado$%s',x,addr[0]);
+                logginglock.release()
+                #logging.error('This will get logged to a file')
+                #print("Enviei o pacote %d"%x)
+                if len(pickle.dumps(datasender))>349:
+                    print(len(pickle.dumps(datasender)))
+                x = x+1;
+                time.sleep(0.0013);
+        except timeout:
+            enviolock.release()
+            print("Receptor parou de receber meus arquivos");
 
     
 
@@ -215,7 +228,7 @@ def main():
     '''
     torrent = Torrent();
     time.sleep(4)
-    torrent.requisicaodeArquivo("luffy3.mp3");
+    #torrent.requisicaodeArquivo("luffy3.mp3");
 
 if __name__ == '__main__':
     main()
