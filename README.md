@@ -1,2 +1,3 @@
 pip install pydub
-sudo apt-get instal ffmpeg
+sudo apt-get install python3-pyaudio
+sudo apt-get install ffmpeg

@@ -25,6 +25,7 @@ PACOTE_PLAY_AUDIO = 2;
 
 enviolock = _thread.allocate_lock()
 recebimentolock = _thread.allocate_lock()
+logginglock = _thread.allocate_lock()
 class Torrent(object):
     """docstring for torrent"""
     def __init__(self):
@@ -96,7 +97,7 @@ class Torrent(object):
                 data, addr = self.sock.recvfrom(1024)
                 recebimentolock.release(); #TODO: provavelmente não vai ficar aqui hehehehe
                 data_arr = pickle.loads(data);
-                print("Recebi do sender= %s o pacote de %d"%(addr[0],data_arr[0]))
+                #print("Recebi do sender= %s o pacote de %d"%(addr[0],data_arr[0]))
                 #print(data_arr);
                 #Se a posição zero contiver o pacote_diretorios:
                 #Preparamos para atualizar a lista de usuários do nosso seders: "Pessoas que podem me enviar arquivos"
@@ -132,11 +133,15 @@ class Torrent(object):
                     try:
                         #sock.sendto("luffy2.mp3".encode('utf-8'),("localhost",12000))
                         self.stream.write(data_arr[3]);
+                        logginglock.acquire()
+                        logging.info("%d PKT RECEBIDO FROM %s",data_arr[1],addr[0])
+                        logginglock.release()
+                        
                     except KeyboardInterrupt:
                         print("Finalizando programa");
                     
-                    logging.info('Função de recebimento ainda não implementada');
-                    print("Função de recebimento ainda não implementada")
+                    #logging.info('Função de recebimento ainda não implementada');
+                    #print("Função de recebimento ainda não implementada")
 
 
 
@@ -192,13 +197,13 @@ class Torrent(object):
                 enviolock.acquire()
                 self.sock.sendto(data_string,addr);
                 enviolock.release()
-            enviolock.acquire()
+            logginglock.acquire()
             logging.info('%d PKT enviado$%s',x,addr[0]);
-            enviolock.release()
+            logginglock.release()
             #logging.error('This will get logged to a file')
             print("Enviei o pacote %d"%x)
             x = x+1;
-            time.sleep(0.0018);
+            time.sleep(0.0013);
 
     
 
