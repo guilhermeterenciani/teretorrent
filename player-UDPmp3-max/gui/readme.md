@@ -10,10 +10,11 @@
 
 - [PyQt Tutorial YT](https://www.youtube.com/watch?v=z33vwdHrAFM)
 
+- [simulação discreta estocastica](https://www.math.tecnico.ulisboa.pt/~ccal/python/nb09.html)
+
+- [vídeo sobre geração de variável aleatória exponencial](https://www.youtube.com/watch?v=Ce_tWXEPTtY)
+
 ## TODO
 
-- Criar form com lista dos arquivos nos outros peers
-		- Nome do arquivo.
-		- check "arquivo local".
-		- Botão reproduzir (iniciar).
-- Criar método vinculado ao botão "entrar" do form "entrar_auto" abrindo o novo form.
+- Implementar atraso aleatório e probabilidade de entrega do pacote - done
+- Resolver issue 1
