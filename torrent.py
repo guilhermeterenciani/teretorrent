@@ -51,14 +51,10 @@ class Torrent(object):
             x.start()
             y = threading.Thread(target=self.recebeArquivos,args=());
             y.start();
-            z = threading.Thread(target=self.play,args=());
-            z.start();
-
         except KeyboardInterrupt:
             print("Finalizando as threading de envio e recebimento dos arquivos")
             x.stop()
             y.stop()
-            z.stop()
             self.sock.close()
     def enviaArquivos(self,name):
         
@@ -152,9 +148,11 @@ class Torrent(object):
                         insertposition = bisect.bisect(self.data_key_to_play,data_arr[1])
                         if insertposition==0 and len(self.data_key_to_play)>0:
                             #Se é para inserir na posição zero é porque o player já passou desse arquivo.
-                            print("%d PKT foi descartado pois já não será executado pelo player"%data_arr[1])
+                            #print("%d PKT foi descartado pois já não será executado pelo player"%data_arr[1])
+                            pass
                         else:
-                            print("%d PKT foi colocado na fila do player e será executado"%data_arr[1])
+                            #print("%d PKT foi colocado na fila do player e será executado"%data_arr[1])
+                            #print(data_arr[3])
                             self.data_to_play.insert(insertposition,data_arr[3])
                             self.data_key_to_play.insert(insertposition,data_arr[1]);
                         player_mp3_lock.release()
@@ -196,6 +194,8 @@ class Torrent(object):
             enviolock.acquire()
             self.sock.sendto(data_string, (server, 12000))
             enviolock.release()
+        self.thread_player = threading.Thread(target=self.play,args=());
+        self.thread_player.start()
     def envia_arquivo_para_cliente(self,namefile,addr):
         song = AudioSegment.from_file('sender/'+namefile, format="mp3")
         x=0;
@@ -240,17 +240,31 @@ class Torrent(object):
     def __del__(self):
         print("Matando meu objeto");
     def play(self):
+        ultimopcttocado =0;
+        erro = 0;
         while True:
             player_mp3_lock.acquire();
             #TODO Programar aqui a politica de espera quando der erro.
             if len(self.data_key_to_play)==0:
-                time.sleep(2);
                 print("não tem musica para tocar")
                 player_mp3_lock.release();
+                erro = erro+1;
+                if erro==5:
+                    self.thread_player.stop();
+                time.sleep(2);
             else:
-                print("%d PKT player"%self.data_key_to_play.popleft())
-                self.stream.write(self.data_to_play.popleft);
-                player_mp3_lock.release();
+                erro = 0;
+                x = self.data_key_to_play.popleft()
+                print("%d PKT player"%(x))
+                if (x < ultimopcttocado):
+                    player_mp3_lock.release();
+                else:
+                    #print(self.data_to_play[0])
+                    aux = self.data_to_play.popleft()
+                    player_mp3_lock.release();
+                    self.stream.write(aux);
+                    ultimopcttocado = x;
+                    #time.sleep(0.1);
 
 def main():
     '''
@@ -260,7 +274,7 @@ def main():
     '''
     torrent = Torrent();
     time.sleep(4)
-    #torrent.requisicaodeArquivo("luffy3.mp3");
+    torrent.requisicaodeArquivo("luffy3.mp3");
 
 if __name__ == '__main__':
     main()
