@@ -35,7 +35,7 @@ class Torrent(object):
         self.sock = socket(AF_INET, SOCK_DGRAM)
         self.sock.setsockopt(SOL_SOCKET,SO_BROADCAST, 1)
         self.sock.bind(('', 12000));
-        self.sock.settimeout(0.2)
+        self.sock.settimeout(0.0002)
         #matriz de arquivos com seus seeders;
         #luff.mp3 [10.10.12.100, 10.10.12.10]
         #tiao.mp3 [10.10.12.102, 10.10.12.101]
@@ -77,7 +77,7 @@ class Torrent(object):
             except KeyboardInterrupt:
                 enviolock.release();
                 print("Finalizando threading de enviaArquivos")
-            except:
+            except timeout:
                 enviolock.release();
                 print("Deu algum erro inesperado na função de enviar arquivos");
             #a função de liberar o arquivo vai ser chamada de 1 em 1 segundo. para enviar por broadcast todos os arquivos que tem na minha máquina.
@@ -98,10 +98,8 @@ class Torrent(object):
                 self.listaarquivos = dict();
             '''
             recebimentolock.acquire()
-            
             try:
-                
-                data, addr = self.sock.recvfrom(351)
+                data, addr = self.sock.recvfrom(3553)
                 recebimentolock.release(); #TODO: provavelmente não vai ficar aqui hehehehe
                 data_arr = pickle.loads(data);
                 #print("Recebi do sender= %s o pacote de %d"%(addr[0],data_arr[0]))
@@ -151,7 +149,7 @@ class Torrent(object):
                             #print("%d PKT foi descartado pois já não será executado pelo player"%data_arr[1])
                             pass
                         else:
-                            #print("%d PKT foi colocado na fila do player e será executado"%data_arr[1])
+                            print("%d PKT foi colocado na fila do player e será executado"%data_arr[1])
                             #print(data_arr[3])
                             self.data_to_play.insert(insertposition,data_arr[3])
                             self.data_key_to_play.insert(insertposition,data_arr[1]);
@@ -166,7 +164,7 @@ class Torrent(object):
 
             except timeout:
                 recebimentolock.release();
-                #print("Estouro de timeout");
+                #print("Estouro de timeout do recebimento de arquivos");
                 pass
                 #print("Não recebi dados de outros piers");
             except KeyboardInterrupt:
@@ -199,7 +197,7 @@ class Torrent(object):
     def envia_arquivo_para_cliente(self,namefile,addr):
         song = AudioSegment.from_file('sender/'+namefile, format="mp3")
         x=0;
-        lamb = 1.820;
+        lamb = 20;
         tamfile=len(song);
         try:
             while(x*lamb<tamfile):
@@ -233,7 +231,7 @@ class Torrent(object):
                 if len(pickle.dumps(datasender))>349:
                     print(len(pickle.dumps(datasender)))
                 x = x+1;
-                time.sleep(0.0013);
+                time.sleep(0.02);
         except timeout:
             enviolock.release()
             print("Receptor parou de receber meus arquivos");
@@ -242,16 +240,17 @@ class Torrent(object):
     def play(self):
         ultimopcttocado =0;
         erro = 0;
-        while True:
+        loop = True
+        while loop:
             player_mp3_lock.acquire();
             #TODO Programar aqui a politica de espera quando der erro.
             if len(self.data_key_to_play)==0:
                 print("não tem musica para tocar")
                 player_mp3_lock.release();
                 erro = erro+1;
-                if erro==5:
-                    self.thread_player.stop();
-                time.sleep(2);
+                if erro==200:
+                    loop=False;
+                time.sleep(1);
             else:
                 erro = 0;
                 x = self.data_key_to_play.popleft()
@@ -264,7 +263,7 @@ class Torrent(object):
                     player_mp3_lock.release();
                     self.stream.write(aux);
                     ultimopcttocado = x;
-                    #time.sleep(0.1);
+                    #time.sleep(0.0001);
 
 def main():
     '''
@@ -274,7 +273,7 @@ def main():
     '''
     torrent = Torrent();
     time.sleep(4)
-    torrent.requisicaodeArquivo("luffy3.mp3");
+    #torrent.requisicaodeArquivo("luffy3.mp3");
 
 if __name__ == '__main__':
     main()
