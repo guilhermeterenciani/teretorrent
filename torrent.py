@@ -10,6 +10,7 @@ import pickle
 #usado para inserir em uma lista ordenada;
 import bisect 
 import logging
+from collections import deque
 
 from pydub import AudioSegment
 import pyaudio
@@ -25,6 +26,7 @@ PACOTE_PLAY_AUDIO = 2;
 
 enviolock = _thread.allocate_lock()
 recebimentolock = _thread.allocate_lock()
+player_mp3_lock = _thread.allocate_lock()
 logginglock = _thread.allocate_lock()
 class Torrent(object):
     """docstring for torrent"""
@@ -40,6 +42,8 @@ class Torrent(object):
         #aaaa.mp3 [10.10.12.100, 10.10.12.101, 10.10.12.103, 10.10.12.104]]
         #bbbb.mp3 [10.10.12.12]
         self.listaarquivos = dict();
+        self.data_to_play = deque()
+        self.data_key_to_play = deque()
         p = pyaudio.PyAudio()
         self.stream = p.open(format=8,channels=2,rate=44100,output=True)
         try:
@@ -47,10 +51,14 @@ class Torrent(object):
             x.start()
             y = threading.Thread(target=self.recebeArquivos,args=());
             y.start();
+            z = threading.Thread(target=self.play,args=());
+            z.start();
+
         except KeyboardInterrupt:
             print("Finalizando as threading de envio e recebimento dos arquivos")
             x.stop()
             y.stop()
+            z.stop()
             self.sock.close()
     def enviaArquivos(self,name):
         
@@ -135,11 +143,21 @@ class Torrent(object):
                     '''
                     try:
                         #sock.sendto("luffy2.mp3".encode('utf-8'),("localhost",12000))
-                        self.stream.write(data_arr[3]);
+                        #self.stream.write(data_arr[3]);
                         logginglock.acquire()
                         logging.info("%d PKT RECEBIDO FROM %s",data_arr[1],addr[0])
                         logginglock.release()
-                        
+
+                        player_mp3_lock.acquire()
+                        insertposition = bisect.bisect(self.data_key_to_play,data_arr[1])
+                        if insertposition==0 and len(self.data_key_to_play)>0:
+                            #Se é para inserir na posição zero é porque o player já passou desse arquivo.
+                            print("%d PKT foi descartado pois já não será executado pelo player"%data_arr[1])
+                        else:
+                            print("%d PKT foi colocado na fila do player e será executado"%data_arr[1])
+                            self.data_to_play.insert(insertposition,data_arr[3])
+                            self.data_key_to_play.insert(insertposition,data_arr[1]);
+                        player_mp3_lock.release()
                     except KeyboardInterrupt:
                         print("Finalizando programa");
                     
@@ -166,6 +184,10 @@ class Torrent(object):
         datasender.append(PACOTE_REQUISICAO_DOWNLOAD);
         datasender.append(nomeArquivo)
         data_string = pickle.dumps(datasender);
+        player_mp3_lock.acquire()
+        self.data_to_play = deque()
+        self.data_key_to_play = deque()
+        player_mp3_lock.release()
         #requerindo permissão de escrita no buffer, pois outras threading podem estar utilizando para escrita.
         
         #enviando os pedido de file para todos os serves que contem o arquivo, sempre pela porta 12000
@@ -173,8 +195,7 @@ class Torrent(object):
             print("Pedindo arquivo par o server"+server);
             enviolock.acquire()
             self.sock.sendto(data_string, (server, 12000))
-            enviolock.release();
-
+            enviolock.release()
     def envia_arquivo_para_cliente(self,namefile,addr):
         song = AudioSegment.from_file('sender/'+namefile, format="mp3")
         x=0;
@@ -218,7 +239,18 @@ class Torrent(object):
             print("Receptor parou de receber meus arquivos");
     def __del__(self):
         print("Matando meu objeto");
-    
+    def play(self):
+        while True:
+            player_mp3_lock.acquire();
+            #TODO Programar aqui a politica de espera quando der erro.
+            if len(self.data_key_to_play)==0:
+                time.sleep(2);
+                print("não tem musica para tocar")
+                player_mp3_lock.release();
+            else:
+                print("%d PKT player"%self.data_key_to_play.popleft())
+                self.stream.write(self.data_to_play.popleft);
+                player_mp3_lock.release();
 
 def main():
     '''
