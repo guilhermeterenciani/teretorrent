@@ -68,6 +68,11 @@ class Ui_MainWindow(object):
 
         self.thread.start()
 
+        
+    def closeEvent(self):
+        print("Finalizando o programa")
+        sys.exit()
+
     def createTableView(self):
         self.tv = self.listaArquivos
 
@@ -129,6 +134,8 @@ if __name__ == "__main__":
     MainWindow = QtWidgets.QMainWindow()
     ui = Ui_MainWindow(tor)
     ui.setupUi(MainWindow)
+
+    app.aboutToQuit.connect(ui.closeEvent)
 
     MainWindow.show()
     sys.exit(app.exec_())
