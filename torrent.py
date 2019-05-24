@@ -149,10 +149,15 @@ class Torrent(object):
                         if insertposition==0 and len(self.data_key_to_play)>0:
                             #Se é para inserir na posição zero é porque o player já passou desse arquivo.
                             #print("%d PKT foi descartado pois já não será executado pelo player"%data_arr[1])
-                            pass
+                            logginglock.acquire()
+                            logging.info("%d PKT foi descartado pois já não será executado pelo player"%data_arr[1])
+                            logginglock.release()
                         else:
-                            print("%d PKT foi colocado na fila do player e será executado"%data_arr[1])
+                            #print("%d PKT foi colocado na fila do player e será executado"%data_arr[1])
                             #print(data_arr[3])
+                            logginglock.acquire()
+                            logging.info("%d PKT foi colocado na fila do player e será executado"%data_arr[1])
+                            logginglock.release()
                             self.data_to_play.insert(insertposition,data_arr[3])
                             self.data_key_to_play.insert(insertposition,data_arr[1]);
                         player_mp3_lock.release()
@@ -230,8 +235,8 @@ class Torrent(object):
                 logginglock.release()
                 #logging.error('This will get logged to a file')
                 #print("Enviei o pacote %d"%x)
-                if len(pickle.dumps(datasender))>349:
-                    print(len(pickle.dumps(datasender)))
+                #if len(pickle.dumps(datasender))>349:
+                #    print(len(pickle.dumps(datasender)))
                 x = x+1;
                 time.sleep(0.02);
         except timeout:
@@ -256,16 +261,17 @@ class Torrent(object):
             else:
                 erro = 0;
                 x = self.data_key_to_play.popleft()
-                print("%d PKT player"%(x))
+                aux = self.data_to_play.popleft()
+                player_mp3_lock.release();
                 if (x < ultimopcttocado):
-                    player_mp3_lock.release();
+                    print("%d PKT já foi executado um posterior"%(x))
                 else:
-                    #print(self.data_to_play[0])
-                    aux = self.data_to_play.popleft()
-                    player_mp3_lock.release();
+                    #print("%d PKT player"%(x))
+                    logginglock.acquire()
+                    logging.info("%d PKT Executado RECEBIDO FROM"%x)
+                    logginglock.release()
                     self.stream.write(aux);
                     ultimopcttocado = x;
-                    #time.sleep(0.0001);
 
 def main():
     '''
@@ -274,8 +280,8 @@ def main():
         exit();
     '''
     torrent = Torrent();
-    time.sleep(4)
-    #torrent.requisicaodeArquivo("luffy3.mp3");
+    time.sleep(5)
+    #torrent.requisicaodeArquivo("luffy.mp3");
 
 if __name__ == '__main__':
     main()
