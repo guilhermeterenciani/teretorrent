@@ -48,8 +48,10 @@ class Torrent(object):
         self.stream = p.open(format=8,channels=2,rate=44100,output=True)
         try:
             x = threading.Thread(target=self.enviaArquivos,args=(1,));
+            x.daemon = True
             x.start()
             y = threading.Thread(target=self.recebeArquivos,args=());
+            y.daemon = True
             y.start();
         except KeyboardInterrupt:
             print("Finalizando as threading de envio e recebimento dos arquivos")
