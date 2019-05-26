@@ -16,8 +16,13 @@ class RandomDelay:
         self.elems = range(0,nElems)
         self.vals = []
 
+        f = open("rtt.txt", "r")
+        self.rtt = float(f.read())
+
+        #print(self.rtt)
+
         for x in self.elems:
-            self.vals.append(self.exprandom(100))
+            self.vals.append(self.rtt/2 + self.exprandom(100))
             #print(self.vals[-1])
         
         #plt.plot(self.vals)
