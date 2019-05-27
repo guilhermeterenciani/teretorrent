@@ -24,22 +24,24 @@ class ModuloAtraso(object):
             try:
                 data, addr = self.sock.recvfrom(3553)
                 data_arr = pickle.loads(data);
-                pacote = data_arr[1];
+                #pacote = data_arr[1];
                 if addr[0] not in self.lista_senders:
                     self.lista_senders[addr[0]] = RandomDelay(data_arr[2])
                 
                 y = self.lista_senders[addr[0]];
                 
-                if(y.acceptPackage):
-                    data_string = pickle.dumps(data_arr);
-                    print("Pacote %d foi aceito com o deley de %f"%(pacote,y.getDelay(pacote)));
-                    threadingenvio = threading.Thread(target=self.enviaPacote,args=(data_string,y.getDelay(data_arr[1])));
+                if(y.acceptPackage()):
+                    #data_string = pickle.dumps(data_arr);
+                    #print("Pacote %d foi aceito com o deley de %f"%(pacote,y.getDelay(pacote)));
+                    threadingenvio = threading.Thread(target=self.enviaPacote,args=(data,y.getDelay(data_arr[1])));
                     threadingenvio.daemon = True
                     threadingenvio.start();
                 else:
-                    print("Pacote %d foi descartado"% pacote)
+                    #print("Pacote %d foi descartado"% pacote)
+                    pass
             except timeout:
-                print("Modulo de Atraso não recebeu pacotes ainda.");
+                #print("Modulo de Atraso não recebeu pacotes ainda.");
+                pass
     def enviaPacote(self,pacote,atraso):
         time.sleep(atraso);
         self.enviolock.acquire()

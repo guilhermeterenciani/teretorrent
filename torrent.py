@@ -11,6 +11,7 @@ import pickle
 import bisect 
 import logging
 from collections import deque
+import numpy as np
 
 from pydub import AudioSegment
 import pyaudio
@@ -150,21 +151,24 @@ class Torrent(object):
                         logginglock.release()
 
                         player_mp3_lock.acquire()
-                        insertposition = bisect.bisect(self.data_key_to_play,data_arr[1])
-                        if insertposition==0 and len(self.data_key_to_play)>0:
-                            #Se é para inserir na posição zero é porque o player já passou desse arquivo.
-                            #print("%d PKT foi descartado pois já não será executado pelo player"%data_arr[1])
-                            logginglock.acquire()
-                            logging.info("%d PKT foi descartado pois já não será executado pelo player"%data_arr[1])
-                            logginglock.release()
+                        if data_arr[1] in self.data_key_to_play:
+                            print("Dado já foi recebido");
                         else:
-                            #print("%d PKT foi colocado na fila do player e será executado"%data_arr[1])
-                            #print(data_arr[3])
-                            logginglock.acquire()
-                            logging.info("%d PKT foi colocado na fila do player e será executado"%data_arr[1])
-                            logginglock.release()
-                            self.data_to_play.insert(insertposition,data_arr[3])
-                            self.data_key_to_play.insert(insertposition,data_arr[1]);
+                            insertposition = bisect.bisect(self.data_key_to_play,data_arr[1])
+                            if insertposition==0 and len(self.data_key_to_play)>0:
+                                #Se é para inserir na posição zero é porque o player já passou desse arquivo.
+                                #print("%d PKT foi descartado pois já não será executado pelo player"%data_arr[1])
+                                logginglock.acquire()
+                                logging.info("%d PKT foi descartado pois já não será executado pelo player"%data_arr[1])
+                                logginglock.release()
+                            else:
+                                #print("%d PKT foi colocado na fila do player e será executado"%data_arr[1])
+                                #print(data_arr[3])
+                                logginglock.acquire()
+                                logging.info("%d PKT foi colocado na fila do player e será executado"%data_arr[1])
+                                logginglock.release()
+                                self.data_to_play.insert(insertposition,data_arr[3])
+                                self.data_key_to_play.insert(insertposition,data_arr[1]);
                         player_mp3_lock.release()
                     except KeyboardInterrupt:
                         print("Finalizando programa");
@@ -216,41 +220,42 @@ class Torrent(object):
             npacotes = npacotes+1;
         try:
             while(x*lamb<tamfile):
-                if(x*lamb+lamb>tamfile):
-                    datasender = [];
-                    datasender.append(PACOTE_PLAY_AUDIO);
-                    datasender.append(x);
-                    datasender.append(npacotes)
-                    datasender.append(song[x:-1].raw_data)
-                    data_string = pickle.dumps(datasender);
-                    enviolock.acquire()
-                    if MODULO_ATRASO:
-                        self.sock.sendto(data_string,(addr[0],12001));
+                if np.random.rand()>0.2:
+                    if(x*lamb+lamb>tamfile):
+                        datasender = [];
+                        datasender.append(PACOTE_PLAY_AUDIO);
+                        datasender.append(x);
+                        datasender.append(npacotes)
+                        datasender.append(song[x:-1].raw_data)
+                        data_string = pickle.dumps(datasender);
+                        enviolock.acquire()
+                        if MODULO_ATRASO:
+                            self.sock.sendto(data_string,(addr[0],12001));
+                        else:
+                            self.sock.sendto(data_string,addr);
+                        enviolock.release()
                     else:
-                        self.sock.sendto(data_string,addr);
-                    enviolock.release()
-                else:
-                    datasender = [];
-                    datasender.append(PACOTE_PLAY_AUDIO);
-                    datasender.append(x);
-                    datasender.append(npacotes)
-                    datasender.append(song[x*lamb:x*lamb+lamb].raw_data)
-                    data_string = pickle.dumps(datasender);
-                    enviolock.acquire()
+                        datasender = [];
+                        datasender.append(PACOTE_PLAY_AUDIO);
+                        datasender.append(x);
+                        datasender.append(npacotes)
+                        datasender.append(song[x*lamb:x*lamb+lamb].raw_data)
+                        data_string = pickle.dumps(datasender);
+                        enviolock.acquire()
 
-                    if MODULO_ATRASO:
-                        self.sock.sendto(data_string,(addr[0],12001));
-                    else:
-                        self.sock.sendto(data_string,addr);
-                    enviolock.release()
-                logginglock.acquire()
-                logging.info('%d PKT enviado$%s',x,addr[0]);
-                logginglock.release()
-                #logging.error('This will get logged to a file')
-                #print("Enviei o pacote %d"%x)
-                #if len(pickle.dumps(datasender))>349:
-                #    print(len(pickle.dumps(datasender)))
-                x = x+1;
+                        if MODULO_ATRASO:
+                            self.sock.sendto(data_string,(addr[0],12001));
+                        else:
+                            self.sock.sendto(data_string,addr);
+                        enviolock.release()
+                    logginglock.acquire()
+                    logging.info('%d PKT enviado$%s',x,addr[0]);
+                    logginglock.release()
+                    #logging.error('This will get logged to a file')
+                    #print("Enviei o pacote %d"%x)
+                    #if len(pickle.dumps(datasender))>349:
+                    #    print(len(pickle.dumps(datasender)))
+                    x = x+1;
                 time.sleep(0.02);
         except timeout:
             enviolock.release()
@@ -270,7 +275,11 @@ class Torrent(object):
                 erro = erro+1;
                 if erro==200:
                     loop=False;
+                logginglock.acquire()
+                logging.info("Pause 1 segundo")
+                logginglock.release()
                 time.sleep(1);
+
             else:
                 erro = 0;
                 x = self.data_key_to_play.popleft()
