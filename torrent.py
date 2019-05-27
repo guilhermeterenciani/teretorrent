@@ -14,6 +14,7 @@ from collections import deque
 
 from pydub import AudioSegment
 import pyaudio
+from moduloatraso import ModuloAtraso;
 
 logging.basicConfig(filename='log/app.log', filemode='w', level=logging.INFO, format='%(asctime)s.%(msecs)03d$ %(message)s %(levelname)s',datefmt='%d$%b$%y$%H$%M$%S$')
 logging.info('This will get logged to a file')
@@ -23,6 +24,9 @@ logging.info('This will get logged to a file')
 PACOTE_DIRETORIOS = 0;
 PACOTE_REQUISICAO_DOWNLOAD = 1;
 PACOTE_PLAY_AUDIO = 2;
+
+#Modulo de atraso no envio dos pacotes.
+MODULO_ATRASO = True;
 
 enviolock = _thread.allocate_lock()
 recebimentolock = _thread.allocate_lock()
@@ -46,6 +50,7 @@ class Torrent(object):
         self.data_key_to_play = deque()
         p = pyaudio.PyAudio()
         self.stream = p.open(format=8,channels=2,rate=44100,output=True)
+        self.moduloatraso = ModuloAtraso();
         try:
             x = threading.Thread(target=self.enviaArquivos,args=(1,));
             x.daemon = True
@@ -206,29 +211,37 @@ class Torrent(object):
         x=0;
         lamb = 20;
         tamfile=len(song);
+        npacotes = tamfile//20; #TODO Testar isso aqui.
+        if (tamfile%20!=0):
+            npacotes = npacotes+1;
         try:
             while(x*lamb<tamfile):
                 if(x*lamb+lamb>tamfile):
                     datasender = [];
                     datasender.append(PACOTE_PLAY_AUDIO);
                     datasender.append(x);
-                    datasender.append(tamfile)
+                    datasender.append(npacotes)
                     datasender.append(song[x:-1].raw_data)
                     data_string = pickle.dumps(datasender);
                     enviolock.acquire()
-                    
-                    self.sock.sendto(data_string,addr);
+                    if MODULO_ATRASO:
+                        self.sock.sendto(data_string,(addr[0],12001));
+                    else:
+                        self.sock.sendto(data_string,addr);
                     enviolock.release()
                 else:
                     datasender = [];
                     datasender.append(PACOTE_PLAY_AUDIO);
                     datasender.append(x);
-                    datasender.append(tamfile)
+                    datasender.append(npacotes)
                     datasender.append(song[x*lamb:x*lamb+lamb].raw_data)
                     data_string = pickle.dumps(datasender);
                     enviolock.acquire()
 
-                    self.sock.sendto(data_string,addr);
+                    if MODULO_ATRASO:
+                        self.sock.sendto(data_string,(addr[0],12001));
+                    else:
+                        self.sock.sendto(data_string,addr);
                     enviolock.release()
                 logginglock.acquire()
                 logging.info('%d PKT enviado$%s',x,addr[0]);
