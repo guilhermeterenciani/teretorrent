@@ -17,9 +17,11 @@ from pydub import AudioSegment
 import pyaudio
 from moduloatraso import ModuloAtraso;
 
-logging.basicConfig(filename='log/app.log', filemode='w', level=logging.INFO, format='%(asctime)s.%(msecs)03d$ %(message)s %(levelname)s',datefmt='%d$%b$%y$%H$%M$%S$')
-logging.info('This will get logged to a file')
+f = open("log/app.log", "w")
+f.write("hora$minutos$segundos$milesimos$npacote$pacote$quemenviou\n")
+f.close()
 
+logging.basicConfig(filename='log/app.log', filemode='a', level=logging.INFO, format='%(asctime)s%(msecs)03d$%(message)s',datefmt='%H$%M$%S$')
 
 #definindo constantes no código:
 PACOTE_DIRETORIOS = 0;
@@ -122,7 +124,7 @@ class Torrent(object):
                             if (addr[0] not in self.listaarquivos[x]): 
                                self.listaarquivos[x].append(addr[0]); 
                     #mensagem de debug para os arquivos.
-                    print (self.listaarquivos);
+                    #print (self.listaarquivos);
                 elif(data_arr[0]==PACOTE_REQUISICAO_DOWNLOAD):
                     '''
                     datasender = [];
@@ -147,7 +149,7 @@ class Torrent(object):
                         #sock.sendto("luffy2.mp3".encode('utf-8'),("localhost",12000))
                         #self.stream.write(data_arr[3]);
                         logginglock.acquire()
-                        logging.info("%d PKT RECEBIDO FROM %s",data_arr[1],addr[0])
+                        logging.info("%d$PKTRECEBIDO",data_arr[1])
                         logginglock.release()
 
                         player_mp3_lock.acquire()
@@ -159,13 +161,13 @@ class Torrent(object):
                                 #Se é para inserir na posição zero é porque o player já passou desse arquivo.
                                 #print("%d PKT foi descartado pois já não será executado pelo player"%data_arr[1])
                                 logginglock.acquire()
-                                logging.info("%d PKT foi descartado pois já não será executado pelo player"%data_arr[1])
+                                logging.info("%d$PKTDESCARTADO"%data_arr[1])
                                 logginglock.release()
                             else:
                                 #print("%d PKT foi colocado na fila do player e será executado"%data_arr[1])
                                 #print(data_arr[3])
                                 logginglock.acquire()
-                                logging.info("%d PKT foi colocado na fila do player e será executado"%data_arr[1])
+                                logging.info("%d$PKTRECEBIDOFILA"%data_arr[1])
                                 logginglock.release()
                                 self.data_to_play.insert(insertposition,data_arr[3])
                                 self.data_key_to_play.insert(insertposition,data_arr[1]);
@@ -208,6 +210,7 @@ class Torrent(object):
             enviolock.acquire()
             self.sock.sendto(data_string, (server, 12000))
             enviolock.release()
+        time.sleep(5);
         self.thread_player = threading.Thread(target=self.play,args=());
         self.thread_player.start()
     def envia_arquivo_para_cliente(self,namefile,addr):
@@ -249,7 +252,7 @@ class Torrent(object):
                             self.sock.sendto(data_string,addr);
                         enviolock.release()
                     logginglock.acquire()
-                    logging.info('%d PKT enviado$%s',x,addr[0]);
+                    logging.info('%d$PKTENVIADO',x);
                     logginglock.release()
                     #logging.error('This will get logged to a file')
                     #print("Enviei o pacote %d"%x)
@@ -269,14 +272,15 @@ class Torrent(object):
         while loop:
             player_mp3_lock.acquire();
             #TODO Programar aqui a politica de espera quando der erro.
-            if len(self.data_key_to_play)==0:
+            tamkeys = len(self.data_key_to_play)
+            if tamkeys==0:
                 print("não tem musica para tocar")
                 player_mp3_lock.release();
                 erro = erro+1;
                 if erro==200:
                     loop=False;
                 logginglock.acquire()
-                logging.info("Pause 1 segundo")
+                logging.info("$PAUSEPLAYER1SEGUNDO")
                 logginglock.release()
                 time.sleep(1);
 
@@ -286,14 +290,17 @@ class Torrent(object):
                 aux = self.data_to_play.popleft()
                 player_mp3_lock.release();
                 if (x < ultimopcttocado):
-                    print("%d PKT já foi executado um posterior"%(x))
+                    print("%d$PKTPLAYJAEXECUTOUPOSTERIO"%(x))
                 else:
                     #print("%d PKT player"%(x))
                     logginglock.acquire()
-                    logging.info("%d PKT Executado RECEBIDO FROM"%x)
+                    logging.info("%d$PKTEXECUTADO"%x)
                     logginglock.release()
+                    time.sleep(0.02)
+                    #print("%d - Quantidade de pacotes na fila"%(tamkeys))
                     self.stream.write(aux);
                     ultimopcttocado = x;
+                    
 
 def main():
     '''
