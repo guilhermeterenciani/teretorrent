@@ -141,7 +141,7 @@ class Torrent(object):
                     #liberando os semaforo.
                     enviolock.release();
                     '''
-                    threadingdownload = threading.Thread(target=self.envia_arquivo_para_cliente,args=(data_arr[1],addr,));
+                    threadingdownload = threading.Thread(target=self.envia_arquivo_para_cliente,args=(data_arr[1],addr,data_arr[2],));
                     threadingdownload.start()
                     
                 elif(PACOTE_PLAY_AUDIO==data_arr[0]):
@@ -182,7 +182,9 @@ class Torrent(object):
                     
                     #logging.info('Função de recebimento ainda não implementada');
                     #print("Função de recebimento ainda não implementada")
-
+                elif PACOTE_REQUISICAO_DOWNLOAD_FALTANTES==data_arr[0]:
+                    threadingdownload = threading.Thread(target=self.envia_arquivo_para_cliente_faltantes,args=(data_arr[1],addr,));
+                    threadingdownload.start()
 
 
             except timeout:
@@ -250,15 +252,15 @@ class Torrent(object):
                 self.sock.sendto(data_string, (server, 12000))
                 enviolock.release()
                 aux = aux+1
-    def envia_arquivo_para_cliente(self,namefile,addr):
+    def envia_arquivo_para_cliente(self,namefile,addr,faltantes=[]):
         song = AudioSegment.from_file('sender/'+namefile, format="mp3")
-        x=0;
         lamb = 20;
         tamfile=len(song);
         npacotes = tamfile//20; #TODO Testar isso aqui.
         if (tamfile%20!=0):
             npacotes = npacotes+1;
-        try:
+        if len(faltantes) == 0:
+            x=0;
             while(x*lamb<tamfile):
                 if np.random.rand()>0.2:
                     if(x*lamb+lamb>tamfile):
@@ -289,7 +291,7 @@ class Torrent(object):
                             self.sock.sendto(data_string,addr);
                         enviolock.release()
                     logginglock.acquire()
-                    logging.info('%d$PKTENVIADO',x);
+                    logging.info('%d$PKT-RE-ENVIADO',x);
                     logginglock.release()
                     #logging.error('This will get logged to a file')
                     #print("Enviei o pacote %d"%x)
@@ -297,9 +299,27 @@ class Torrent(object):
                     #    print(len(pickle.dumps(datasender)))
                     x = x+1;
                 time.sleep(0.02);
-        except timeout:
-            enviolock.release()
-            print("Receptor parou de receber meus arquivos");
+        else:
+            for x in faltantes:
+                datasender = [];
+                datasender.append(PACOTE_PLAY_AUDIO);
+                datasender.append(x);
+                datasender.append(npacotes)
+                datasender.append(song[x*lamb:x*lamb+lamb].raw_data)
+                data_string = pickle.dumps(datasender);
+                enviolock.acquire()
+
+                if MODULO_ATRASO:
+                    self.sock.sendto(data_string,(addr[0],12001));
+                else:
+                    self.sock.sendto(data_string,addr);
+                enviolock.release()
+                logginglock.acquire()
+                logging.info('%d$PKTENVIADO',x);
+                logginglock.release()
+
+
+        
     def __del__(self):
         print("Matando meu objeto");
     def play(self):
@@ -322,6 +342,7 @@ class Torrent(object):
                 #tamfaltanteanterior é a quandidade de pacotes que ainda faltam para encher o buffer
                 #no inicio é considerado o tamanho do arquivo. Pois é maior que o buffer.
                 tamfaltantesanterior = self.tamfileplay
+                
                 while True:
                     if ultimopcttocado + buffer <= self.tamfileplay:
                         player_mp3_lock.acquire();
@@ -345,6 +366,7 @@ class Torrent(object):
                 logginglock.acquire()
                 logging.info("$PLAYBUFFERING")
                 logginglock.release()
+                
             else:
                 erro = 0;
                 x = self.data_key_to_play.popleft()
