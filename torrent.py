@@ -141,7 +141,7 @@ class Torrent(object):
                     #liberando os semaforo.
                     enviolock.release();
                     '''
-                    threadingdownload = threading.Thread(target=self.envia_arquivo_para_cliente,args=(data_arr[1],addr,data_arr[2],));
+                    threadingdownload = threading.Thread(target=self.envia_arquivo_para_cliente,args=(data_arr[1],addr,));
                     threadingdownload.start()
                     
                 elif(PACOTE_PLAY_AUDIO==data_arr[0]):
@@ -183,7 +183,7 @@ class Torrent(object):
                     #logging.info('Função de recebimento ainda não implementada');
                     #print("Função de recebimento ainda não implementada")
                 elif PACOTE_REQUISICAO_DOWNLOAD_FALTANTES==data_arr[0]:
-                    threadingdownload = threading.Thread(target=self.envia_arquivo_para_cliente_faltantes,args=(data_arr[1],addr,));
+                    threadingdownload = threading.Thread(target=self.envia_arquivo_para_cliente,args=(data_arr[1],addr,data_arr[2],));
                     threadingdownload.start()
 
 
@@ -218,7 +218,6 @@ class Torrent(object):
             enviolock.acquire()
             self.sock.sendto(data_string, (server, 12000))
             enviolock.release()
-        time.sleep(5);
         self.thread_player = threading.Thread(target=self.play,args=());
         self.thread_player.start()
     def requisicaodeArquivosFaltantes(self,nomeArquivo,listaFaltantes):
@@ -317,9 +316,7 @@ class Torrent(object):
                 logginglock.acquire()
                 logging.info('%d$PKTENVIADO',x);
                 logginglock.release()
-
-
-        
+                time.sleep(0.02);     
     def __del__(self):
         print("Matando meu objeto");
     def play(self):
@@ -357,11 +354,11 @@ class Torrent(object):
                     if tamfaltantes==0:
                         break
                     elif tamfaltantes < tamfaltantesanterior:
-                        self.requisicaodeArquivosFaltantes(self.arquivo_to_play,list(listfaltantes)[:50])
+                        self.requisicaodeArquivosFaltantes(self.arquivo_to_play,list(listfaltantes)[:5])
                         time.sleep(1);
                     else:
-                        self.requisicaodeArquivosFaltantes(self.arquivo_to_play,list(listfaltantes))
-                        time.sleep(4);
+                        self.requisicaodeArquivosFaltantes(self.arquivo_to_play,list(listfaltantes)[:20])
+                        time.sleep(1);
                     tamfaltantesanterior = tamfaltantes;
                 logginglock.acquire()
                 logging.info("$PLAYBUFFERING")
