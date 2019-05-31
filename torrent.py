@@ -160,14 +160,15 @@ class Torrent(object):
                             #print("Dado já foi recebido");
                             pass
                         else:
-                            insertposition = bisect.bisect(self.data_key_to_play,data_arr[1])
-                            if insertposition==0 and len(self.data_key_to_play)>0:
+                            
+                            if data_arr[1]<=self.ultimopcttocado:
                                 #Se é para inserir na posição zero é porque o player já passou desse arquivo.
                                 #print("%d PKT foi descartado pois já não será executado pelo player"%data_arr[1])
                                 logginglock.acquire()
                                 logging.info("%d$PKTDESCARTADO"%data_arr[1])
                                 logginglock.release()
                             else:
+                                insertposition = bisect.bisect(self.data_key_to_play,data_arr[1])
                                 #print("%d PKT foi colocado na fila do player e será executado"%data_arr[1])
                                 #print(data_arr[3])
                                 self.tamfileplay = data_arr[2]
@@ -218,6 +219,7 @@ class Torrent(object):
             enviolock.acquire()
             self.sock.sendto(data_string, (server, 12000))
             enviolock.release()
+        self.ultimopcttocado = -1;
         self.thread_player = threading.Thread(target=self.play,args=());
         self.thread_player.start()
     def requisicaodeArquivosFaltantes(self,nomeArquivo,listaFaltantes):
@@ -316,11 +318,12 @@ class Torrent(object):
                 logginglock.acquire()
                 logging.info('%d$PKTENVIADO',x);
                 logginglock.release()
-                time.sleep(0.02);     
+                time.sleep(0.02);
+        del song[:]
+        del song   
     def __del__(self):
         print("Matando meu objeto");
     def play(self):
-        ultimopcttocado =0;
         erro = 0;
         loop = True
         while loop:
@@ -331,6 +334,8 @@ class Torrent(object):
             if tamkeys==0:
                 player_mp3_lock.release();
                 print("Buffering...");
+                if self.tamfileplay ==0:
+                    self.tamfileplay = 10;
                 #calculando o tamanho do buffer. Está passado no init da classe.
                 buffer = (self.tamfileplay*self.buffersize)//100;
                 logginglock.acquire()
@@ -341,24 +346,24 @@ class Torrent(object):
                 tamfaltantesanterior = self.tamfileplay
                 
                 while True:
-                    if ultimopcttocado + buffer <= self.tamfileplay:
+                    if self.ultimopcttocado + buffer <= self.tamfileplay:
                         player_mp3_lock.acquire();
-                        listfaltantes = set(list(range(ultimopcttocado,ultimopcttocado+buffer))).difference(self.data_key_to_play)
+                        listfaltantes = set(list(range(self.ultimopcttocado+1,self.ultimopcttocado+buffer))).difference(self.data_key_to_play)
                         player_mp3_lock.release();
                     else:
                         player_mp3_lock.acquire();
-                        listfaltantes = set(list(range(ultimopcttocado,self.tamfileplay))).difference(self.data_key_to_play)
+                        listfaltantes = set(list(range(self.ultimopcttocado+1,self.tamfileplay))).difference(self.data_key_to_play)
                         player_mp3_lock.Release();
                     tamfaltantes = len(listfaltantes);
                     print("tambuffer = %d e faltantes = %d"%(buffer,tamfaltantes))
                     if tamfaltantes==0:
                         break
                     elif tamfaltantes < tamfaltantesanterior:
-                        self.requisicaodeArquivosFaltantes(self.arquivo_to_play,list(listfaltantes)[:5])
-                        time.sleep(1);
-                    else:
                         self.requisicaodeArquivosFaltantes(self.arquivo_to_play,list(listfaltantes)[:20])
-                        time.sleep(1);
+                        time.sleep(5);
+                    else:
+                        self.requisicaodeArquivosFaltantes(self.arquivo_to_play,list(listfaltantes)[:50])
+                        time.sleep(10);
                     tamfaltantesanterior = tamfaltantes;
                 logginglock.acquire()
                 logging.info("$PLAYBUFFERING")
@@ -369,7 +374,7 @@ class Torrent(object):
                 x = self.data_key_to_play.popleft()
                 aux = self.data_to_play.popleft()
                 player_mp3_lock.release();
-                if (x < ultimopcttocado):
+                if (x < self.ultimopcttocado):
                     print("%d$PKTPLAYJAEXECUTOUPOSTERIO"%(x))
                 else:
                     #print("%d PKT player"%(x))
@@ -379,7 +384,7 @@ class Torrent(object):
                     time.sleep(0.02)
                     #print("%d - Quantidade de pacotes na fila"%(tamkeys))
                     self.stream.write(aux);
-                    ultimopcttocado = x;
+                    self.ultimopcttocado = x;
 def main():
     '''
     if len(sys.argv)<2:
