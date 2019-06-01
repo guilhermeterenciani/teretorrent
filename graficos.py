@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-class GeraGraficos:
+class GraphicsGen:
     """
     classe destinada à geração de gráficos do trabalho
     """
@@ -13,16 +13,37 @@ class GeraGraficos:
     def __init__(self):
         self.df = pd.read_csv("log/app.log", sep='$')
 
-    def graficoTransmissao(self, who = 'receptor', kind = 'line' ):
+    def throughputGraphic(self):
+        dft    = self.df[self.df['pacote'] == 'PKTEXECUTADO']  #executado
+
+        segs = dft['segundos']
+        mil  = dft['milesimos']
+
+        grouped = dft.groupby('segundos')
+
+        for name, group in grouped:
+            count = 0 #10398  11
+            antVal = group['milesimos'].iloc[0]
+
+            interval = group[group['milesimos']<= (antVal+100)]
+
+            print( group['milesimos'] )
+
+        #print( dft[dft['segundos'] == dft['segundos'].max()] )
+
+    def transmissionGraphic(self, who = 'receptor', kind = 'line' ):
         '''
         gera o gráfico de transmissão e armazena a saída em png
         who: receptor ou emissor, os logs devem gerar gráficos separados, opcional
         kind: tipo de gráfico a visualizar: line, scatter,  opcional
         '''
-        df     = self.df[self.df['pacote'] == 'PKTENVIADO']    #enviado
-        dfr    = self.df[self.df['pacote'] == 'PKTRECEBIDO']   #recebido
-        dft    = self.df[self.df['pacote'] == 'PKTEXECUTADO']  #executado
-        dfdesc = self.df[self.df['pacote'] == 'PKTDESCARTADO'] #descartado
+        mint   = self.df['minutos'].min()
+        dfmin  = self.df[self.df['minutos'] == mint ]
+
+        df     = dfmin[dfmin['pacote'] == 'PKTENVIADO'  ]   #enviado
+        dfr    = dfmin[dfmin['pacote'] == 'PKTRECEBIDO' ]   #recebido
+        dft    = dfmin[dfmin['pacote'] == 'PKTEXECUTADO']  #executado
+        dfdesc = dfmin[dfmin['pacote'] == 'PKTDESCARTADO'] #descartado
 
         tempoTotal          = pd.DataFrame()
         tempoTotal["tempo"] = self.df['segundos'] + self.df['milesimos']/100
@@ -31,7 +52,7 @@ class GeraGraficos:
         npc  = pd.DataFrame(df['npacote'].astype('int64'))
 
         time1 = pd.DataFrame()
-        time1["tempo"] = df['segundos'] + self.df['milesimos']/1000
+        time1["tempo"] = df['segundos'] + df['milesimos']/1000
 
         #ndf = pd.DataFrame( data = tempoTotal)
         ndf1 = pd.DataFrame( data = time1)
@@ -63,7 +84,7 @@ class GeraGraficos:
         ndf3 = pd.DataFrame( data = timet)
         ndf3['Tocados'] = npct
 
-        print(ndf3['Tocados'])
+        #print(ndf3['Tocados'])
 
         ######### tocados #########
 
@@ -99,8 +120,11 @@ class GeraGraficos:
         fig.savefig('rel_transmissão_'+who+'.png', papertype = 'a4')
         plt.close(fig)
 
+        print(mint)
 
-obj = GeraGraficos()
+
+obj = GraphicsGen()
 
 #plot do gráfico sequencial
-obj.graficoTransmissao()
+obj.transmissionGraphic()
+#obj.throughputGraphic()
