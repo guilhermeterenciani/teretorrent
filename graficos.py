@@ -13,10 +13,11 @@ class GeraGraficos:
     def __init__(self):
         self.df = pd.read_csv("log/app.log", sep='$')
 
-    def graficoTransmissaoSeq(self, who = 'receptor'):
+    def graficoTransmissao(self, who = 'receptor', kind = 'line' ):
         '''
         gera o gráfico de transmissão e armazena a saída em png
-        who: receptor ou emissor, os logs devem gerar gráficos separados
+        who: receptor ou emissor, os logs devem gerar gráficos separados, opcional
+        kind: tipo de gráfico a visualizar: line, scatter,  opcional
         '''
         df     = self.df[self.df['pacote'] == 'PKTENVIADO']    #enviado
         dfr    = self.df[self.df['pacote'] == 'PKTRECEBIDO']   #recebido
@@ -82,27 +83,24 @@ class GeraGraficos:
         #ndf = ndf.fillna(0)
         ndf1 = ndf1.dropna()
         ndf2 = ndf2.dropna()
-        #ndf3 = ndf2.dropna()
-        #ndf4 = ndf2.dropna()
+        
 
         fig, ax = plt.subplots()
 
         plt.title( 'Gráfico de transmissão - ' + who.capitalize() )
         plt.ylabel('Número do pacote')
 
-        ndf1.plot.line(x = "tempo", y = "Transmitido", ax = ax)
-        ndf2.plot.line(x = "tempo", y = "Recebido", ax = ax)
-        ndf3.plot.line(x = "tempo", y = "Tocados", ax = ax)
-        ndf4.plot.line(x = "tempo", y = "Descartados", ax = ax)
+        ndf1.plot(x = "tempo", y = "Transmitido", ax = ax, kind = kind)
+        ndf2.plot(x = "tempo", y = "Recebido", ax = ax, kind = kind)
+        ndf3.plot(x = "tempo", y = "Tocados", ax = ax, kind = kind)
+        ndf4.plot(x = "tempo", y = "Descartados", ax = ax, kind = kind)
         plt.show()
-
-
-        #print(ndf3)
-        #print(ndf4)
 
         fig.savefig('rel_transmissão_'+who+'.png', papertype = 'a4')
         plt.close(fig)
 
 
 obj = GeraGraficos()
-obj.graficoTransmissaoSeq()
+
+#plot do gráfico sequencial
+obj.graficoTransmissao()
