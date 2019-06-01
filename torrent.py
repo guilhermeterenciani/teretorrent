@@ -12,6 +12,7 @@ import bisect
 import logging
 from collections import deque
 import numpy as np
+import random
 
 from pydub import AudioSegment
 import pyaudio
@@ -52,7 +53,8 @@ class Torrent(object):
         self.listaarquivos = dict();
         self.data_to_play = deque()
         self.data_key_to_play = deque()
-        self.tamfileplay = 0;
+        self.tamfileplay = 400;
+        self.ultimopcttocado = 0;
         self.buffersize=2;#porcentagem do arquivo que será buffer.
         p = pyaudio.PyAudio()
         self.stream = p.open(format=8,channels=2,rate=44100,output=True)
@@ -319,7 +321,6 @@ class Torrent(object):
                 logging.info('%d$PKTENVIADO',x);
                 logginglock.release()
                 time.sleep(0.02);
-        del song[:]
         del song   
     def __del__(self):
         print("Matando meu objeto");
@@ -353,16 +354,20 @@ class Torrent(object):
                     else:
                         player_mp3_lock.acquire();
                         listfaltantes = set(list(range(self.ultimopcttocado+1,self.tamfileplay))).difference(self.data_key_to_play)
-                        player_mp3_lock.Release();
+                        player_mp3_lock.release();
                     tamfaltantes = len(listfaltantes);
                     print("tambuffer = %d e faltantes = %d"%(buffer,tamfaltantes))
                     if tamfaltantes==0:
                         break
                     elif tamfaltantes < tamfaltantesanterior:
-                        self.requisicaodeArquivosFaltantes(self.arquivo_to_play,list(listfaltantes)[:20])
+                        aux = list(listfaltantes)
+                        random.shuffle(aux)
+                        self.requisicaodeArquivosFaltantes(self.arquivo_to_play,aux[:50])
                         time.sleep(5);
                     else:
-                        self.requisicaodeArquivosFaltantes(self.arquivo_to_play,list(listfaltantes)[:50])
+                        aux = list(listfaltantes)
+                        random.shuffle(aux)
+                        self.requisicaodeArquivosFaltantes(self.arquivo_to_play,aux[:100])
                         time.sleep(10);
                     tamfaltantesanterior = tamfaltantes;
                 logginglock.acquire()
