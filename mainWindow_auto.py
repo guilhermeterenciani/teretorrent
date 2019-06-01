@@ -71,7 +71,6 @@ class Ui_MainWindow(object):
         
     def closeEvent(self):
         print("Finalizando o programa")
-        sys.exit()
 
     def createTableView(self):
         self.tv = self.listaArquivos
