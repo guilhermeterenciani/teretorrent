@@ -17,4 +17,4 @@
 ## TODO
 
 - Implementar atraso aleatório e probabilidade de entrega do pacote - done
-- Resolver issue 1
+- Resolver issue 1 - done
