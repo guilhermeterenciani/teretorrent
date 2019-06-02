@@ -21,30 +21,69 @@ class GraphicsGen:
 
         self.dfrec = pd.read_csv("log/app.log", sep='$')
 
-    def throughputGraphic(self):
+
+
+
+    def throughputGraphic(self, step = 100):
+        PACKET_SIZE = 3561/1024 # to kbps
+
         dft    = self.dfrec[self.dfrec['pacote'] == 'PKTEXECUTADO']  #executado
 
         segs = dft['segundos']
         mil  = dft['milesimos']
 
-        grouped = dft.groupby('segundos')
+        grouped = dft.groupby(['minutos', 'segundos'])
 
+        values = []
+        time   = []
+        
+        i = 0
+        
         for name, group in grouped:
-            count = 0 #10398  11
-            antVal = group['milesimos'].iloc[0]
+            antVal  = group['milesimos'].iloc[0]
+            lastVal = group['milesimos'].iloc[-1]
 
-            interval = group[group['milesimos']<= (antVal+100)]
+            #print('antVal: {} lastVal: {} '.format(antVal, lastVal))
+            
+            while(antVal <= lastVal):
+                interval = group[(group['milesimos']>= (antVal)) & (group['milesimos']< (antVal+step))]
+                #interval = group[group['milesimos'].between(antVal, antVal+step)]
 
-            print( group['milesimos'] )
+                count = len(interval.index)
+
+                values.append(count*PACKET_SIZE)
+                time.append( (i*step)/1000.0 )
+
+                i = i + 1
+                antVal = antVal + step
+
+                #print( interval )
+                #print( 'size: {}, antval: {}, lastVal: {}'.format(count, antVal, lastVal) )
+            
+        fig, ax = plt.subplots()
+
+        data = {
+            'tempo': time,
+            'vazao': values
+        }
+
+        dfThroughput = pd.DataFrame(data=data)
+            
+        plt.ylabel('Kbps')
+        dfThroughput.plot(x = "tempo", y = "vazao", ax = ax, kind = 'line', style='-' , label='Vazão no receptor - Média: {:.2f} kbps '.format(dfThroughput['vazao'].mean()) )              
+        plt.show()
 
         #print( dft[dft['segundos'] == dft['segundos'].max()] )
 
-
+        
+        fig.savefig('rel_vazao_.png', papertype = 'a4')
+        plt.close(fig)
 
     def transmissionGraphic(self, kind = 'line', style = '-' ):
         '''
         gera o gráfico de transmissão e armazena a saída em png
         kind: tipo de gráfico a visualizar: line, scatter,  opcional
+        style: o marcador a ser aplicado (- para linha contínua)
         '''
         
         fig, ax = plt.subplots()
@@ -180,4 +219,6 @@ obj = GraphicsGen()
 
 #plot do gráfico sequencial
 obj.transmissionGraphic(style='o', kind='scatter')
-#obj.throughputGraphic()
+
+#descomente aqui para gerar o gráfico de vazão
+obj.throughputGraphic()
