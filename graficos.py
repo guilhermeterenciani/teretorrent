@@ -4,6 +4,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import os
 
 class GraphicsGen:
     """
@@ -11,7 +12,13 @@ class GraphicsGen:
     """
 
     def __init__(self):
-        self.dfenv = pd.read_csv("log/app_envio1.log", sep='$')
+        self.dfenv = []
+        self.dfenv.append(pd.read_csv("log/app_envio1.log", sep='$'))
+
+        if os.path.isfile("log/app_envio2.log"):
+            self.dfenv.append(pd.read_csv("log/app_envio2.log", sep='$'))
+
+
         self.dfrec = pd.read_csv("log/app.log", sep='$')
 
     def throughputGraphic(self):
@@ -32,6 +39,8 @@ class GraphicsGen:
 
         #print( dft[dft['segundos'] == dft['segundos'].max()] )
 
+
+
     def transmissionGraphic(self, kind = 'line', style = '-' ):
         '''
         gera o gráfico de transmissão e armazena a saída em png
@@ -41,45 +50,59 @@ class GraphicsGen:
         fig, ax = plt.subplots()
 
         plt.title( 'Gráfico de transmissão' )
+
+        size = 5
         
         mint     = self.dfrec['minutos'].iloc[0]
         segt     = self.dfrec['segundos'].iloc[0]
         mst      = self.dfrec['milesimos'].iloc[0]
         dfmin    = self.dfrec[self.dfrec['minutos'] < mint+3 ]
-        dfminenv = self.dfenv[self.dfenv['minutos'] < mint+3 ]
+        
+        dfminenv = []
+        df = []
 
+        for el in self.dfenv:
+            dfminenv.append (el[el['minutos'] < mint+3 ])
+        
+        for el in dfminenv:
+            df.append(el[el['pacote'] == 'PKTENVIADO'  ])  #enviado
         
 
-        df     = dfminenv[dfminenv['pacote'] == 'PKTENVIADO'  ]   #enviado
+        
         dfr    = dfmin[dfmin['pacote'] == 'PKTRECEBIDO' ]   #recebido
         dft    = dfmin[dfmin['pacote'] == 'PKTEXECUTADO']  #executado
         dfdesc = dfmin[dfmin['pacote'] == 'PKTDESCARTADO'] #descartado
 
-        print(self.dfrec)
+        #print(self.dfrec)
 
         #tempoTotal          = pd.DataFrame()
         #tempoTotal["tempo"] = self.df['segundos'] + self.df['milesimos']/100
         
         ######### enviado #########
         try:
-            npc  = pd.DataFrame(df['npacote'].astype('int64'))
+            ndf1 = []
+            collors = ['red', 'yellow']
 
-            #print(npc)
+            for el in df:
+                npc = pd.DataFrame(el['npacote'].astype('int64'))
 
-            time1 = pd.DataFrame()
-            time1["tempo"] = (df['minutos']-mint)*60 + (df['segundos']-segt) + (df['milesimos']-mst)/1000
+                #print(npc)
 
-            #ndf = pd.DataFrame( data = tempoTotal)
-            ndf1 = pd.DataFrame( data = time1)
-            ndf1['Transmitido'] = npc
+                time1 = pd.DataFrame()
+                time1["tempo"] = (el['minutos']-mint)*60 + (el['segundos']-segt) + (el['milesimos']-mst)/1000
 
-            ndf1 = ndf1.dropna()
+                #ndf = pd.DataFrame( data = tempoTotal)
+                ndf1.append(pd.DataFrame( data = time1)) 
+                ndf1[-1]['Transmitido'] = npc
 
-            #ndf = ndf.reset_index()
-            #del ndf['index']
+                ndf1[-1] = ndf1[-1].dropna()
 
-            #ndf1.plot(x = "tempo", y = "Transmitido", ax = ax, kind = kind, marker=style,  linestyle='dashed')
-            ndf1.plot(x = "tempo", y = "Transmitido", ax = ax, kind = kind, marker=style, color='red' , label='Transmitido', s=10)    
+                #ndf = ndf.reset_index()
+                #del ndf['index']
+
+                #ndf1.plot(x = "tempo", y = "Transmitido", ax = ax, kind = kind, marker=style,  linestyle='dashed')
+            for i in range(0, len(ndf1)):
+                ndf1[i].plot(x = "tempo", y = "Transmitido", ax = ax, kind = kind, marker=style, color=collors[i%2] , label='Transmitido - Seeder '+str(i+1) , s=size)    
         except:
             print("não foi possível plotar os pacotes transmitidos")
         
@@ -99,7 +122,7 @@ class GraphicsGen:
 
             #print(ndf2)
 
-            ndf2.plot(x = "tempo", y = "Recebido", ax = ax, kind = kind, marker=style, color='blue', label='Recebido', s=10)
+            ndf2.plot(x = "tempo", y = "Recebido", ax = ax, kind = kind, marker=style, color='blue', label='Recebido', s=size)
         except:
             print("não foi possível plotar os pacotes recebidos")
 
@@ -119,7 +142,7 @@ class GraphicsGen:
 
             #print(ndf3)
 
-            ndf3.plot(x = "tempo", y = "Tocados", ax = ax, kind = kind, marker=style,  color='green', label='Tocados', s=10)
+            ndf3.plot(x = "tempo", y = "Tocados", ax = ax, kind = kind, marker=style,  color='green', label='Tocados', s=size)
         except:
             print("não foi possível plotar os pacotes tocados")
 
@@ -138,7 +161,7 @@ class GraphicsGen:
             ndf4 = pd.DataFrame( data = timed)
             ndf4['Descartados'] = npcd
 
-            ndf4.plot(x = "tempo", y = "Descartados", ax = ax, kind = kind, marker=style , color='red', label='Descartados', s=10)
+            ndf4.plot(x = "tempo", y = "Descartados", ax = ax, kind = kind, marker=style , color='red', label='Descartados', s=size)
         except:
             print("não foi possível plotar os pacotes descartados")
 
