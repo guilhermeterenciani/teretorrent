@@ -355,7 +355,6 @@ class Torrent(object):
                         player_mp3_lock.acquire();
                         listfaltantes = set(list(range(self.ultimopcttocado+1,self.tamfileplay))).difference(self.data_key_to_play)
                         player_mp3_lock.release();
-                    player_mp3_lock.acquire();
                     tamfaltantes = len(listfaltantes);
                     print("tambuffer = %d e faltantes = %d"%(buffer,tamfaltantes))
                     if tamfaltantes==0:
