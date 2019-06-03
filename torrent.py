@@ -34,7 +34,7 @@ PACOTE_REQUISICAO_DOWNLOAD_FALTANTES = 3;
 MODULO_ATRASO = True;
 
 #Ativação do módulo de envio Aleatório de pacotes
-ALEATORIO = True;
+ALEATORIO = False;
 
 enviolock = _thread.allocate_lock()
 recebimentolock = _thread.allocate_lock()
@@ -56,9 +56,9 @@ class Torrent(object):
         self.listaarquivos = dict();
         self.data_to_play = deque()
         self.data_key_to_play = deque()
-        self.tamfileplay = 28000;
+        self.tamfileplay = 5;
         self.ultimopcttocado = 0;
-        self.buffersize=5;#porcentagem do arquivo que será buffer.
+        self.buffersize=60;#porcentagem do arquivo que será buffer.
         p = pyaudio.PyAudio()
         self.stream = p.open(format=8,channels=2,rate=44100,output=True)
         self.moduloatraso = ModuloAtraso();
@@ -281,7 +281,7 @@ class Torrent(object):
                             datasender.append(PACOTE_PLAY_AUDIO);
                             datasender.append(x);
                             datasender.append(npacotes)
-                            datasender.append(song[x:-1].raw_data)
+                            datasender.append(song[x:self.tamfileplay].raw_data)
                             data_string = pickle.dumps(datasender);
                             enviolock.acquire()
                             if MODULO_ATRASO:
@@ -429,6 +429,10 @@ class Torrent(object):
                 tamfaltantesanterior = self.tamfileplay
                 
                 while True:
+                    buffer = (self.tamfileplay*self.buffersize)//100;
+                    
+                    if (self.tamfileplay>5 and self.tamfileplay < self.ultimopcttocado + buffer):
+                        buffer = self.tamfileplay - self.ultimopcttocado
                     if self.ultimopcttocado + buffer <= self.tamfileplay:
                         player_mp3_lock.acquire();
                         listfaltantes = set(list(range(self.ultimopcttocado+1,self.ultimopcttocado+buffer))).difference(self.data_key_to_play)
