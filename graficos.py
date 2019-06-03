@@ -200,7 +200,7 @@ class GraphicsGen:
             ndf4 = pd.DataFrame( data = timed)
             ndf4['Descartados'] = npcd
 
-            ndf4.plot(x = "tempo", y = "Descartados", ax = ax, kind = kind, marker=style , color='red', label='Descartados', s=size)
+            ndf4.plot(x = "tempo", y = "Descartados", ax = ax, kind = kind, marker=style , color='black', label='Descartados', s=size)
         except:
             print("não foi possível plotar os pacotes descartados")
 
