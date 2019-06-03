@@ -294,7 +294,7 @@ class Torrent(object):
                             self.sock.sendto(data_string,addr);
                         enviolock.release()
                     logginglock.acquire()
-                    logging.info('%d$PKT-RE-ENVIADO',x);
+                    logging.info('%d$PKTENVIADO',x);
                     logginglock.release()
                     #logging.error('This will get logged to a file')
                     #print("Enviei o pacote %d"%x)
@@ -303,12 +303,12 @@ class Torrent(object):
                     x = x+1;
                 time.sleep(0.02);
         else:
-            for x in faltantes:
+            for cont in faltantes:
                 datasender = [];
                 datasender.append(PACOTE_PLAY_AUDIO);
-                datasender.append(x);
+                datasender.append(cont);
                 datasender.append(npacotes)
-                datasender.append(song[x*lamb:x*lamb+lamb].raw_data)
+                datasender.append(song[cont*lamb:cont*lamb+lamb].raw_data)
                 data_string = pickle.dumps(datasender);
                 enviolock.acquire()
 
@@ -318,7 +318,7 @@ class Torrent(object):
                     self.sock.sendto(data_string,addr);
                 enviolock.release()
                 logginglock.acquire()
-                logging.info('%d$PKTENVIADO',x);
+                logging.info('%d$PKTREENVIADO',cont);
                 logginglock.release()
                 time.sleep(0.02);
         del song   
@@ -355,6 +355,7 @@ class Torrent(object):
                         player_mp3_lock.acquire();
                         listfaltantes = set(list(range(self.ultimopcttocado+1,self.tamfileplay))).difference(self.data_key_to_play)
                         player_mp3_lock.release();
+                    player_mp3_lock.acquire();
                     tamfaltantes = len(listfaltantes);
                     print("tambuffer = %d e faltantes = %d"%(buffer,tamfaltantes))
                     if tamfaltantes==0:
