@@ -386,7 +386,7 @@ class Torrent(object):
                     logginglock.acquire()
                     logging.info("%d$PKTEXECUTADO"%x)
                     logginglock.release()
-                    time.sleep(0.02)
+                    #time.sleep(0.02)
                     #print("%d - Quantidade de pacotes na fila"%(tamkeys))
                     self.stream.write(aux);
                     self.ultimopcttocado = x;
