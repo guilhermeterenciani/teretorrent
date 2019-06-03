@@ -318,7 +318,7 @@ class Torrent(object):
                     self.sock.sendto(data_string,addr);
                 enviolock.release()
                 logginglock.acquire()
-                logging.info('%d$PKTREENVIADO',cont);
+                logging.info('%d$PKTENVIADO',cont);
                 logginglock.release()
                 time.sleep(0.02);
         del song   
