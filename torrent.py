@@ -33,6 +33,9 @@ PACOTE_REQUISICAO_DOWNLOAD_FALTANTES = 3;
 #Modulo de atraso no envio dos pacotes.
 MODULO_ATRASO = True;
 
+#Ativação do módulo de envio Aleatório de pacotes
+ALEATORIO = False;
+
 enviolock = _thread.allocate_lock()
 recebimentolock = _thread.allocate_lock()
 player_mp3_lock = _thread.allocate_lock()
@@ -53,9 +56,9 @@ class Torrent(object):
         self.listaarquivos = dict();
         self.data_to_play = deque()
         self.data_key_to_play = deque()
-        self.tamfileplay = 400;
+        self.tamfileplay = 28000;
         self.ultimopcttocado = 0;
-        self.buffersize=2;#porcentagem do arquivo que será buffer.
+        self.buffersize=10;#porcentagem do arquivo que será buffer.
         p = pyaudio.PyAudio()
         self.stream = p.open(format=8,channels=2,rate=44100,output=True)
         self.moduloatraso = ModuloAtraso();
@@ -143,8 +146,13 @@ class Torrent(object):
                     #liberando os semaforo.
                     enviolock.release();
                     '''
-                    threadingdownload = threading.Thread(target=self.envia_arquivo_para_cliente,args=(data_arr[1],addr,));
-                    threadingdownload.start()
+                    if ALEATORIO:
+                        threadingdownload = threading.Thread(target=self.envia_arquivo_para_cliente,args=(data_arr[1],addr,1));
+                        threadingdownload.start()
+                    else:
+
+                        threadingdownload = threading.Thread(target=self.envia_arquivo_para_cliente,args=(data_arr[1],addr,0));
+                        threadingdownload.start()
                     
                 elif(PACOTE_PLAY_AUDIO==data_arr[0]):
                     '''
@@ -186,7 +194,7 @@ class Torrent(object):
                     #logging.info('Função de recebimento ainda não implementada');
                     #print("Função de recebimento ainda não implementada")
                 elif PACOTE_REQUISICAO_DOWNLOAD_FALTANTES==data_arr[0]:
-                    threadingdownload = threading.Thread(target=self.envia_arquivo_para_cliente,args=(data_arr[1],addr,data_arr[2],));
+                    threadingdownload = threading.Thread(target=self.envia_arquivo_para_cliente,args=(data_arr[1],addr,0,data_arr[2],));
                     threadingdownload.start()
 
 
@@ -219,6 +227,7 @@ class Torrent(object):
         for server in self.listaarquivos[("./sender/"+nomeArquivo)]:
             print("Pedindo arquivo par o server"+server);
             enviolock.acquire()
+            self.sock.settimeout(0.1)
             self.sock.sendto(data_string, (server, 12000))
             enviolock.release()
         self.ultimopcttocado = -1;
@@ -255,36 +264,110 @@ class Torrent(object):
                 self.sock.sendto(data_string, (server, 12000))
                 enviolock.release()
                 aux = aux+1
-    def envia_arquivo_para_cliente(self,namefile,addr,faltantes=[]):
-        song = AudioSegment.from_file('sender/'+namefile, format="mp3")
-        lamb = 20;
-        tamfile=len(song);
-        npacotes = tamfile//20; #TODO Testar isso aqui.
-        if (tamfile%20!=0):
-            npacotes = npacotes+1;
-        if len(faltantes) == 0:
-            x=0;
-            while(x*lamb<tamfile):
-                if np.random.rand()>0.2:
-                    if(x*lamb+lamb>tamfile):
-                        datasender = [];
-                        datasender.append(PACOTE_PLAY_AUDIO);
-                        datasender.append(x);
-                        datasender.append(npacotes)
-                        datasender.append(song[x:-1].raw_data)
-                        data_string = pickle.dumps(datasender);
-                        enviolock.acquire()
-                        if MODULO_ATRASO:
-                            self.sock.sendto(data_string,(addr[0],12001));
+    def envia_arquivo_para_cliente(self,namefile,addr,opcao=0,faltantes=[]):
+        if opcao==0:
+            song = AudioSegment.from_file('sender/'+namefile, format="mp3")
+            lamb = 20;
+            tamfile=len(song);
+            npacotes = tamfile//20; #TODO Testar isso aqui.
+            if (tamfile%20!=0):
+                npacotes = npacotes+1;
+            if len(faltantes) == 0:
+                x=0;
+                while(x*lamb<tamfile):
+                    if np.random.rand()>0.2:
+                        if(x*lamb+lamb>tamfile):
+                            datasender = [];
+                            datasender.append(PACOTE_PLAY_AUDIO);
+                            datasender.append(x);
+                            datasender.append(npacotes)
+                            datasender.append(song[x:-1].raw_data)
+                            data_string = pickle.dumps(datasender);
+                            enviolock.acquire()
+                            if MODULO_ATRASO:
+                                self.sock.sendto(data_string,(addr[0],12001));
+                            else:
+                                self.sock.sendto(data_string,addr);
+                            enviolock.release()
                         else:
-                            self.sock.sendto(data_string,addr);
-                        enviolock.release()
+                            datasender = [];
+                            datasender.append(PACOTE_PLAY_AUDIO);
+                            datasender.append(x);
+                            datasender.append(npacotes)
+                            datasender.append(song[x*lamb:x*lamb+lamb].raw_data)
+                            data_string = pickle.dumps(datasender);
+                            enviolock.acquire()
+
+                            if MODULO_ATRASO:
+                                self.sock.sendto(data_string,(addr[0],12001));
+                            else:
+                                self.sock.sendto(data_string,addr);
+                            enviolock.release()
+                        logginglock.acquire()
+                        logging.info('%d$PKTENVIADO',x);
+                        logginglock.release()
+                        #logging.error('This will get logged to a file')
+                        #print("Enviei o pacote %d"%x)
+                        #if len(pickle.dumps(datasender))>349:
+                        #    print(len(pickle.dumps(datasender)))
+                        x = x+1;
+                    time.sleep(0.02);
+            else:
+                for cont in faltantes:
+                    datasender = [];
+                    datasender.append(PACOTE_PLAY_AUDIO);
+                    datasender.append(cont);
+                    datasender.append(npacotes)
+                    datasender.append(song[cont*lamb:cont*lamb+lamb].raw_data)
+                    data_string = pickle.dumps(datasender);
+                    enviolock.acquire()
+
+                    if MODULO_ATRASO:
+                        self.sock.sendto(data_string,(addr[0],12001));
                     else:
+                        self.sock.sendto(data_string,addr);
+                    enviolock.release()
+                    logginglock.acquire()
+                    logging.info('%d$PKTENVIADO',cont);
+                    logginglock.release()
+                    time.sleep(0.02);
+            del song
+        else:
+            song = AudioSegment.from_file('sender/'+namefile, format="mp3")
+            lamb = 20;
+            tamfile=len(song);
+            npacotes = tamfile//20; #TODO Testar isso aqui.
+            if (tamfile%20!=0):
+                npacotes = npacotes+1;
+            
+            pacotesenviados = deque()
+            contpkg = 0
+            npacotesparcial = npacotes
+            while contpkg< npacotes:
+                sorteado = np.random.randint(npacotes+1)
+                if sorteado in pacotesenviados:
+                    
+                    insertposition = bisect.bisect(pacotesenviados,sorteado)
+                    '''
+                    listpacotes = list(pacotesenviados)
+                    for aux in range(pacotesenviados,npacotesparcial)
+                        if listpacotes[aux] +1 != listpacotes[aux]
+                    '''
+                    #print(list(range(sorteado,npacotesparcial)))
+                    setfaltantes = set(list(range(sorteado,npacotesparcial))).difference(set(list(pacotesenviados)[insertposition:]))
+                    listfaltantes = list(setfaltantes)
+                    if(len(listfaltantes))==0:
+                        npacotesparcial = soteado-1
+                    else:
+                        
+                        insertposition = bisect.bisect(pacotesenviados,listfaltantes[0])
+                        pacotesenviados.insert(insertposition,listfaltantes[0])
+                        contpkg = contpkg+1
                         datasender = [];
                         datasender.append(PACOTE_PLAY_AUDIO);
-                        datasender.append(x);
+                        datasender.append(listfaltantes[0]);
                         datasender.append(npacotes)
-                        datasender.append(song[x*lamb:x*lamb+lamb].raw_data)
+                        datasender.append(song[listfaltantes[0]*lamb:listfaltantes[0]*lamb+lamb].raw_data)
                         data_string = pickle.dumps(datasender);
                         enviolock.acquire()
 
@@ -293,35 +376,33 @@ class Torrent(object):
                         else:
                             self.sock.sendto(data_string,addr);
                         enviolock.release()
-                    logginglock.acquire()
-                    logging.info('%d$PKTENVIADO',x);
-                    logginglock.release()
-                    #logging.error('This will get logged to a file')
-                    #print("Enviei o pacote %d"%x)
-                    #if len(pickle.dumps(datasender))>349:
-                    #    print(len(pickle.dumps(datasender)))
-                    x = x+1;
-                time.sleep(0.02);
-        else:
-            for cont in faltantes:
-                datasender = [];
-                datasender.append(PACOTE_PLAY_AUDIO);
-                datasender.append(cont);
-                datasender.append(npacotes)
-                datasender.append(song[cont*lamb:cont*lamb+lamb].raw_data)
-                data_string = pickle.dumps(datasender);
-                enviolock.acquire()
-
-                if MODULO_ATRASO:
-                    self.sock.sendto(data_string,(addr[0],12001));
+                        logginglock.acquire()
+                        logging.info('%d$PKTENVIADO',listfaltantes[0]);
+                        logginglock.release()
+                        print('%d$PKTENVIADO',listfaltantes[0])
+                        time.sleep(0.02);
                 else:
-                    self.sock.sendto(data_string,addr);
-                enviolock.release()
-                logginglock.acquire()
-                logging.info('%d$PKTENVIADO',cont);
-                logginglock.release()
-                time.sleep(0.02);
-        del song   
+                    contpkg = contpkg+1
+                    insertposition = bisect.bisect(pacotesenviados,sorteado)
+                    pacotesenviados.insert(insertposition,sorteado)
+                    datasender = [];
+                    datasender.append(PACOTE_PLAY_AUDIO);
+                    datasender.append(sorteado);
+                    datasender.append(npacotes)
+                    datasender.append(song[sorteado*lamb:sorteado*lamb+lamb].raw_data)
+                    data_string = pickle.dumps(datasender);
+                    enviolock.acquire()
+
+                    if MODULO_ATRASO:
+                        self.sock.sendto(data_string,(addr[0],12001));
+                    else:
+                        self.sock.sendto(data_string,addr);
+                    enviolock.release()
+                    logginglock.acquire()
+                    logging.info('%d$PKTENVIADO',sorteado);
+                    logginglock.release()
+                    print('%d$PKTENVIADO',sorteado)
+                    time.sleep(0.02);
     def __del__(self):
         print("Matando meu objeto");
     def play(self):
@@ -362,34 +443,35 @@ class Torrent(object):
                     elif tamfaltantes < tamfaltantesanterior:
                         aux = list(listfaltantes)
                         random.shuffle(aux)
-                        self.requisicaodeArquivosFaltantes(self.arquivo_to_play,aux[:50])
-                        time.sleep(5);
+                        self.requisicaodeArquivosFaltantes(self.arquivo_to_play,aux[:20])
+                        time.sleep(2);
                     else:
                         aux = list(listfaltantes)
                         random.shuffle(aux)
-                        self.requisicaodeArquivosFaltantes(self.arquivo_to_play,aux[:100])
-                        time.sleep(10);
+                        self.requisicaodeArquivosFaltantes(self.arquivo_to_play,aux[:50])
+                        time.sleep(4);
                     tamfaltantesanterior = tamfaltantes;
                 logginglock.acquire()
                 logging.info("$PLAYBUFFERING")
                 logginglock.release()
                 
             else:
-                erro = 0;
-                x = self.data_key_to_play.popleft()
-                aux = self.data_to_play.popleft()
-                player_mp3_lock.release();
-                if (x < self.ultimopcttocado):
-                    print("%d$PKTPLAYJAEXECUTOUPOSTERIO"%(x))
-                else:
-                    #print("%d PKT player"%(x))
-                    logginglock.acquire()
-                    logging.info("%d$PKTEXECUTADO"%x)
-                    logginglock.release()
-                    #time.sleep(0.02)
-                    #print("%d - Quantidade de pacotes na fila"%(tamkeys))
-                    self.stream.write(aux);
-                    self.ultimopcttocado = x;
+                if not(ALEATORIO)or len(self.data_key_to_play)>buffer:
+                    erro = 0;
+                    x = self.data_key_to_play.popleft()
+                    aux = self.data_to_play.popleft()
+                    player_mp3_lock.release();
+                    if (x < self.ultimopcttocado):
+                        print("%d$PKTPLAYJAEXECUTOUPOSTERIO"%(x))
+                    else:
+                        #print("%d PKT player"%(x))
+                        logginglock.acquire()
+                        logging.info("%d$PKTEXECUTADO"%x)
+                        logginglock.release()
+                        #time.sleep(0.02)
+                        #print("%d - Quantidade de pacotes na fila"%(tamkeys))
+                        self.stream.write(aux);
+                        self.ultimopcttocado = x;
 def main():
     '''
     if len(sys.argv)<2:

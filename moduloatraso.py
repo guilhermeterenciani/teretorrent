@@ -4,6 +4,7 @@ from randomdelay import RandomDelay
 from socket import *
 import time
 import _thread
+import logging
 class ModuloAtraso(object):
     """docstring for ModuloAtraso"""
     def __init__(self):
@@ -17,6 +18,8 @@ class ModuloAtraso(object):
         y.start();
         self.lista_senders = dict();
         self.enviolock = _thread.allocate_lock()
+        self.lognum = 1
+        self.listoflogins = dict();
 
     
     def recebeArquivos(self):
@@ -26,10 +29,25 @@ class ModuloAtraso(object):
                 data_arr = pickle.loads(data);
                 #pacote = data_arr[1];
                 if addr[0] not in self.lista_senders:
-                    self.lista_senders[addr[0]] = RandomDelay(data_arr[2])
+                    self.lista_senders[addr[0]] = [RandomDelay(data_arr[2]),self.lognum]
+                    logFile= "./log/app_envio"+str(self.lognum)+".log"
+                    print(logFile)
+                    f = open(logFile, "w")
+                    f.write("hora$minutos$segundos$milesimos$npacote$pacote$quemenviou\n")
+                    f.close()                            
+                    
+                    logger=logging.getLogger(__name__)  #__name__ é uma variável que contem o nome do módulo. Assim, saberemos que módulo emitiu a mensagem
+                    logger.setLevel(logging.INFO)
+                    logger_handler = logging.FileHandler(logFile, mode='a')
+                    logger_handler.setLevel(logging.INFO)
+                    logger_formatter = logging.Formatter('%(asctime)s%(msecs)03d$%(message)s','%H$%M$%S$')
+                    logger_handler.setFormatter(logger_formatter)
+                    logger.addHandler(logger_handler)
+                    self.listoflogins[self.lognum] = logger;
+                    self.lognum = self.lognum+1;
                 
-                y = self.lista_senders[addr[0]];
-                
+                y = self.lista_senders[addr[0]][0];
+                self.listoflogins[self.lista_senders[addr[0]][1]].info(str(data_arr[1]) + '$PKTENVIADO')
                 if(y.acceptPackage()):
                     #data_string = pickle.dumps(data_arr);
                     #print("Pacote %d foi aceito com o deley de %f"%(pacote,y.getDelay(pacote)));
@@ -45,5 +63,5 @@ class ModuloAtraso(object):
     def enviaPacote(self,pacote,atraso):
         time.sleep(atraso);
         self.enviolock.acquire()
-        self.sock.sendto(pacote,('localhost',12000));
+        self.sock.sendto(pacote,('localhost',12000))
         self.enviolock.release()

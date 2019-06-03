@@ -12,7 +12,7 @@ class RandomDelay:
 
     def __init__(self, nElems):
         #f chance de perder um pacote
-        self.f = 0.1
+        self.f = 0.5
         self.elems = range(0,nElems)
         self.vals = []
 

@@ -12,11 +12,10 @@ class GraphicsGen:
     """
 
     def __init__(self):
-        self.dfenv = []
-        self.dfenv.append(pd.read_csv("log/app_envio1.log", sep='$'))
+        
+        self.arquivoenvio1 = pd.read_csv("log/app_envio1.log", sep='$')
 
-        if os.path.isfile("log/app_envio2.log"):
-            self.dfenv.append(pd.read_csv("log/app_envio2.log", sep='$'))
+        self.arquivoenvio2 = pd.read_csv("log/app_envio2.log", sep='$')
 
 
         self.dfrec = pd.read_csv("log/app.log", sep='$')
@@ -95,23 +94,24 @@ class GraphicsGen:
         mint     = self.dfrec['minutos'].iloc[0]
         segt     = self.dfrec['segundos'].iloc[0]
         mst      = self.dfrec['milesimos'].iloc[0]
+
+        minutosenviado1 = self.arquivoenvio1['minutos'].iloc[0]
+        segudnosenviado1 = self.arquivoenvio1['segundos'].iloc[0]
+        mileenviado1 =self.arquivoenvio1['milesimos'].iloc[0]
+
+        minutosenviado2 = self.arquivoenvio2['minutos'].iloc[0]
+        segudnosenviado2 = self.arquivoenvio2['segundos'].iloc[0]
+        mileenviado2 =self.arquivoenvio2['milesimos'].iloc[0]
+
         dfmin    = self.dfrec[self.dfrec['minutos'] < mint+3 ]
-        
-        dfminenv = []
-        df = []
-
-        for el in self.dfenv:
-            dfminenv.append (el[el['minutos'] < mint+3 ])
-        
-        for el in dfminenv:
-            df.append(el[el['pacote'] == 'PKTENVIADO'  ])  #enviado
-        
-
+        dfminarquivoenvio1 = self.arquivoenvio1[self.arquivoenvio1['minutos'] < mint+3 ]
+        dfminarquivoenvio2 = self.arquivoenvio2[self.arquivoenvio2['minutos'] < mint+3 ]
         
         dfr    = dfmin[dfmin['pacote'] == 'PKTRECEBIDO' ]   #recebido
         dft    = dfmin[dfmin['pacote'] == 'PKTEXECUTADO']  #executado
         dfdesc = dfmin[dfmin['pacote'] == 'PKTDESCARTADO'] #descartado
-
+        dfrenviado1 = dfminarquivoenvio1[dfminarquivoenvio1['pacote'] == 'PKTENVIADO'  ]
+        dfrenviado2 = dfminarquivoenvio2[dfminarquivoenvio2['pacote'] == 'PKTENVIADO'  ]
         #print(self.dfrec)
 
         #tempoTotal          = pd.DataFrame()
@@ -119,33 +119,38 @@ class GraphicsGen:
         
         ######### enviado #########
         try:
-            ndf1 = []
-            collors = ['red', 'yellow']
+            npct12  = pd.DataFrame(dfrenviado1['npacote'].astype('int64'))
 
-            for el in df:
-                npc = pd.DataFrame(el['npacote'].astype('int64'))
+            timet = pd.DataFrame()
+            timet["tempo"] = (dfrenviado1['minutos']-minutosenviado1)*60 + (dfrenviado1['segundos']-segudnosenviado1) + (dfrenviado1['milesimos']-mileenviado1)/1000
 
-                #print(npc)
+            ndf312 = pd.DataFrame( data = timet)
+            ndf312['Enviados'] = npct12
 
-                time1 = pd.DataFrame()
-                time1["tempo"] = (el['minutos']-mint)*60 + (el['segundos']-segt) + (el['milesimos']-mst)/1000
+            #print(ndf3)
 
-                #ndf = pd.DataFrame( data = tempoTotal)
-                ndf1.append(pd.DataFrame( data = time1)) 
-                ndf1[-1]['Transmitido'] = npc
-
-                ndf1[-1] = ndf1[-1].dropna()
-
-                #ndf = ndf.reset_index()
-                #del ndf['index']
-
-                #ndf1.plot(x = "tempo", y = "Transmitido", ax = ax, kind = kind, marker=style,  linestyle='dashed')
-            for i in range(0, len(ndf1)):
-                ndf1[i].plot(x = "tempo", y = "Transmitido", ax = ax, kind = kind, marker=style, color=collors[i%2] , label='Transmitido - Seeder '+str(i+1) , s=size)    
+            ndf312.plot(x = "tempo", y = "Enviados", ax = ax, kind = kind, marker=style,  color='red', label='Enviados Sender1', s=size)
         except:
-            print("não foi possível plotar os pacotes transmitidos")
+            print("não foi possível plotar os pacotes tocados")
         
         ######### enviado #########
+        ######### enviado #########
+        try:
+            npct  = pd.DataFrame(dfrenviado2['npacote'].astype('int64'))
+
+            timetere = pd.DataFrame()
+            timetere["tempo"] = (dfrenviado2['minutos']-minutosenviado2)*60 + (dfrenviado2['segundos']-segudnosenviado2) + (dfrenviado2['milesimos']-mileenviado2)/1000
+
+            ndf3 = pd.DataFrame( data = timetere)
+            ndf3['Enviados1'] = npct
+
+            #print(ndf3)
+
+            ndf3.plot(x = "tempo", y = "Enviados1", ax = ax, kind = kind, marker=style,  color='yellow', label='Enviados Sender2', s=size)
+        except:
+            print("não foi possível plotar os pacotes tocados")
+        ######### enviado #########
+
 
         ######### recebido #########
         try:
